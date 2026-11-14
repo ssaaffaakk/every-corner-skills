@@ -1,0 +1,16 @@
+name: Test hook
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-hook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run hook tests
+        run: |
+          chmod +x hooks/explain-risky-commands.sh hooks/test-hook.sh
+          ./hooks/test-hook.sh

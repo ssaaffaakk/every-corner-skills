@@ -1,0 +1,35 @@
+name: Idea or request
+description: Suggest a hook pattern, an improvement, or a new skill
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of idea is it?
+      options:
+        - A new dangerous command the hook should flag
+        - An improvement to an existing skill
+        - A new skill
+        - A better example or explanation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What is your idea?
+      description: Explain it in plain words.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What problem does it solve?
+      description: A real situation where a beginner would have been confused or hurt is the best reason.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: For a hook pattern, give the command and what it does. For a skill, show what Claude should say.

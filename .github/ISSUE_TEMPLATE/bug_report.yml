@@ -1,0 +1,42 @@
+name: Bug report
+description: A skill did not work as expected, or the hook flagged something wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please remove anything private (names, keys, internal paths) before pasting.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which part?
+      options:
+        - plan-every-corner (skill)
+        - explain-before-approve (skill)
+        - explain-risky-commands (hook)
+        - Docs or examples
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened?
+      description: Describe what Claude did, or paste the explanation or warning you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we reproduce it?
+      description: The task you gave Claude, or the command the hook handled.
+  - type: input
+    id: version
+    attributes:
+      label: Claude Code version
+      description: Run `claude --version`.
