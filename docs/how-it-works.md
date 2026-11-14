@@ -77,7 +77,7 @@ Safe commands pass through silently. The hook never blocks anything by itself; i
 ## Repo layout
 
 ```
-skills/
+safak-skills/
 ├── skills/
 │   ├── plan-every-corner/SKILL.md
 │   └── explain-before-approve/SKILL.md

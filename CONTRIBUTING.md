@@ -9,7 +9,7 @@ Thanks for helping. This project exists so beginners can understand what an AI c
 - **Wording fixes.** If a sentence confused you, it will confuse others.
 - **Bug reports.** A skill that did not trigger, an explanation that was wrong or misleading, or a hook that flagged something harmless.
 
-Not sure where to start? Look for issues labeled [`good first issue`](https://github.com/ssaaffaakk/skills/labels/good%20first%20issue).
+Not sure where to start? Look for issues labeled [`good first issue`](https://github.com/ssaaffaakk/safak-skills/labels/good%20first%20issue).
 
 ## Writing style
 

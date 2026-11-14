@@ -1,4 +1,4 @@
-# skills
+# safak-skills
 
 **Claude Code skills that help you understand what the AI is doing, before and while it does it.**
 
@@ -60,8 +60,8 @@ You need [Claude Code](https://claude.com/claude-code) and a terminal.
 **1. Get the files**
 
 ```bash
-git clone https://github.com/ssaaffaakk/skills.git
-cd skills
+git clone https://github.com/ssaaffaakk/safak-skills.git
+cd safak-skills
 ```
 
 **2. Copy the two skills**
@@ -101,7 +101,7 @@ These are written for Claude Code. The ideas should transfer, but we have not te
 
 ## Contributing
 
-New hook patterns, real before/after examples and fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then open an [issue](https://github.com/ssaaffaakk/skills/issues) or a pull request. Issues labeled `good first issue` are a good place to start.
+New hook patterns, real before/after examples and fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then open an [issue](https://github.com/ssaaffaakk/safak-skills/issues) or a pull request. Issues labeled `good first issue` are a good place to start.
 
 ## License
 
