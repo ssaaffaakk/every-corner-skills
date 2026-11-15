@@ -1,56 +1,92 @@
-# every-corner-skills
+<div align="center">
 
-**Claude Code skills that make the AI work like a good senior developer: it understands your project, asks the right questions before building, and explains every risky step in plain English.**
+<img src="assets/banner.svg" alt="every corner: Claude Code skills that work like a senior developer" width="100%"/>
 
-## The problem
+<h3><em>Understand the project. Get asked the right questions. Approve only what you understand.</em></h3>
 
-Working with an AI coding agent usually goes wrong in one of three ways:
+<p>
+  <a href="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml"><img src="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml/badge.svg" alt="Tests"/></a>
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fssaaffaakk%2Fevery-corner-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=f59e0b" alt="Version"/>
+  <img src="https://img.shields.io/badge/Claude_Code-plugin-D97757" alt="Claude Code plugin"/>
+  <img src="https://img.shields.io/badge/always--on_cost-~300_tokens-0f172a" alt="About 300 tokens always-on"/>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ssaaffaakk/every-corner-skills?color=22c55e" alt="MIT license"/></a>
+  <a href="https://github.com/ssaaffaakk/every-corner-skills/stargazers"><img src="https://img.shields.io/github/stars/ssaaffaakk/every-corner-skills?style=social" alt="GitHub stars"/></a>
+</p>
 
-1. **You don't understand the project, and neither does the AI.** It edits code without knowing how the pieces fit together.
-2. **The AI guesses what you meant.** You say "add favorites", it builds *its* idea of favorites, and you find out it's wrong after the code is written.
-3. **You click Accept without understanding.** In manual mode it keeps asking things like this, and beginners just approve:
+<p>
+  <a href="#-install-in-30-seconds"><b>Install</b></a> ·
+  <a href="#-pick-what-you-need"><b>Skills</b></a> ·
+  <a href="#-see-it-in-action"><b>Demo</b></a> ·
+  <a href="#-how-it-works"><b>How it works</b></a> ·
+  <a href="#-faq"><b>FAQ</b></a>
+</p>
+
+</div>
+
+---
+
+Your AI coding agent is fast. But it **edits code it doesn't understand**, **builds what it guessed you meant**, and **asks you to approve commands you can't read**.
+
+**every corner** fixes all three with three small skills that make Claude Code behave like the senior developer you wish you had next to you.
+
+## 🚀 Install in 30 seconds
+
+Inside Claude Code:
 
 ```
-Run command: git push --force origin feature/login
-[ Accept ]  [ Reject ]
+/plugin marketplace add ssaaffaakk/every-corner-skills
+/plugin install every-corner@every-corner-skills
 ```
 
-Research backs this up. When requirements are incomplete, AI code accuracy drops by 35-52%, yet models ask clarifying questions in under 40% of cases. Users approve 93% of permission prompts, and people stop reading a repeated warning after the second time.
+Start a new session. That's it: three skills and a safety net, for about **300 tokens per session** until a skill is actually used.
 
-## The three skills
+<details>
+<summary>Prefer the terminal, or copying files by hand?</summary>
 
-Think of your project as a house.
+From a terminal:
 
-| Skill | When | What it does |
-|---|---|---|
-| 🏠 **every-corner-tour** | You join or return to an existing project | Reads every corner of the house and explains how it works, like a friend showing you around. Proves what it covered. |
-| 🧱 **every-corner-interview** | You want to build a new feature or project | Treats your request as a new room. Reads the project first, then asks every question that would change the build, and only those, until the room is fully described. Then it builds it in one go. |
-| 🛑 **every-corner-explain** | While the AI works | Before each risky action, explains in plain English what will happen and whether it can be undone. Safe actions stay quiet. |
-
-Plus an optional **safety-net hook** that catches dangerous shell commands even if the AI forgets.
-
-## How they work together
-
-```mermaid
-flowchart LR
-    T["🏠 Tour<br/>explains the project"] -->|"TOUR.md"| I["🧱 Interview<br/>asks only what the<br/>code can't answer"]
-    I -->|"spec file"| B["Build<br/>in one go"]
-    B --> E["🛑 Explain<br/>each risky step:<br/>'step 3 of your spec'"]
+```bash
+claude plugin marketplace add ssaaffaakk/every-corner-skills
 ```
 
-Each skill hands its notes to the next one. The tour writes `docs/every-corner/TOUR.md`, so the interview skips every question the tour already answered. The interview writes `docs/every-corner/specs/<feature>.md`, so the build follows exactly what you agreed and each explanation can point to it.
+```bash
+claude plugin install every-corner@every-corner-skills
+```
 
-## See it in action
+Without the plugin system:
 
-**Interview:** you say *"Add a favorites feature."* Instead of guessing, Claude reads the project, then asks:
+```bash
+git clone https://github.com/ssaaffaakk/every-corner-skills.git
+cd every-corner-skills
+mkdir -p ~/.claude/skills
+cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-explain ~/.claude/skills/
+```
+
+The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
+
+</details>
+
+## 🧭 Pick what you need
+
+| You are... | Just say | Skill | You get |
+|---|---|---|---|
+| 🏠 **New to a project** | *"Give me a tour of this project."* | `every-corner-tour` | The project explained like a friend would: one real flow told as a story, a map, the gotchas, and proof of which folders were covered. |
+| 🧱 **About to build something** | *"Interview me, I want to add favorites."* | `every-corner-interview` | Every question that changes the build (and nothing it could look up), then a spec, then a build that matches it the first time. |
+| 🛑 **Approving what the AI does** | *Nothing, it's automatic.* | `every-corner-explain` | Risky actions explained in plain English before you click Accept. Safe ones stay quiet. |
+
+Plus a **safety-net hook** that catches dangerous shell commands (`rm -rf`, `git push --force`, `DROP TABLE` and more) even if the AI forgets to explain. It's on by default; switch it off with `/plugin configure every-corner@every-corner-skills`.
+
+## 🎬 See it in action
+
+**🧱 You say "Add a favorites feature."** Instead of guessing, Claude reads your project, then asks only what it can't know:
 
 > **A user favorites a recipe that the author later deletes. What should they see?**
-> ○ It disappears from their favorites quietly (Recommended)
+> ○ It disappears from their favorites quietly **(Recommended)**
 > ○ A grey "This recipe was removed" placeholder
 
-It keeps asking until every part of the room is clear: one question for a small change, twenty for a big one. It never asks something it could have looked up. Then it writes the spec and builds.
+One question for a small change, twenty for a big one, never one it could have looked up. Then it writes `docs/every-corner/specs/favorites.md` and builds exactly that.
 
-**Explain:** the same force push, after:
+**🛑 Claude wants to force-push.** Instead of a bare command and an Accept button, you see:
 
 ```
 ⛔ CANNOT BE UNDONE
@@ -62,81 +98,90 @@ Safer option: git push --force-with-lease (refuses to overwrite work you haven't
 Check this: Nobody else is working on this branch.
 ```
 
+**🏠 You ask for a tour.** You get a story, not a file list:
+
+> Let's follow what happens when someone opens a recipe page. Their browser asks for `/recipes/42`. The first stop is `src/server.js:12`, the front door… **The loop:** door → receptionist → desk → database → page. Almost every feature here follows it.
+
 Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md)
 
-## Install (1 minute)
+## 🔧 How it works
 
-Inside [Claude Code](https://claude.com/claude-code), run:
-
-```
-/plugin marketplace add ssaaffaakk/every-corner-skills
-/plugin install every-corner@every-corner-skills
-```
-
-Or from a terminal:
-
-```bash
-claude plugin marketplace add ssaaffaakk/every-corner-skills
+```mermaid
+flowchart LR
+    T["🏠 Tour<br/>explains the project"] -->|"TOUR.md"| I["🧱 Interview<br/>asks only what the<br/>code can't answer"]
+    I -->|"spec file"| B["Build<br/>in one go"]
+    B --> E["🛑 Explain<br/>each risky step:<br/>'step 3 of your spec'"]
 ```
 
-```bash
-claude plugin install every-corner@every-corner-skills
-```
+The skills hand their notes to each other. The tour saves `docs/every-corner/TOUR.md`, so the interview skips everything the tour already found. The interview saves a spec per feature, so the build follows exactly what you agreed and every explanation can point back to it.
 
-Start a new session and you're done. You get all three skills plus the safety-net hook, for about **300 tokens per session** until a skill is actually used.
+## ✨ What makes it different
 
-**Use them:**
+- **🔍 Reads before it asks.** Strong agents that explore the code first need about half as many questions ([Ambig-SWE](https://arxiv.org/abs/2502.13069)).
+- **🎯 No question cap, no useless questions.** A question is asked only if you alone know the answer and it changes the build. Everything else becomes a default you can see.
+- **✅ Knows when it's done.** It stops asking only when every requirement has a testable "done" check.
+- **🗺️ Proves "every corner".** The tour lists every folder as explained, mentioned, or skipped and why. Nothing is skipped silently.
+- **🤫 Quiet unless it matters.** People stop reading warnings they see on every action, so safe actions get nothing and irreversible ones look different.
+- **🪶 Light.** About 300 tokens per session until a skill runs. The tour is cached by commit, so it only re-reads what changed.
 
-- New to a project? Say *"Give me a tour of this project."*
-- Building something? Say *"Interview me, I want to add <your feature>."*
-- The explanations before risky actions appear on their own.
-
-**Turn off the safety-net hook:** run `/plugin configure every-corner@every-corner-skills` and switch off "Safety-net hook". The skills keep working. The hook needs `jq`; without it, the hook simply stays out of the way.
-
-**Update later:** `/plugin marketplace update every-corner-skills`, then restart.
+## ❓ FAQ
 
 <details>
-<summary>Install without the plugin system (copy the files)</summary>
+<summary><b>Won't the interview ask too many questions?</b></summary>
 
-```bash
-git clone https://github.com/ssaaffaakk/every-corner-skills.git
-cd every-corner-skills
-mkdir -p ~/.claude/skills
-cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-explain ~/.claude/skills/
-```
-
-To install for one project only (so your team gets them too), copy them into that project's `.claude/skills/` folder instead. The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
+It asks as many as the feature needs, and only questions that pass four tests: only you can answer it, the answer changes the build, it hasn't been asked already, and you can realistically answer it. Most questions are one-click multiple choice with a recommended answer. You can say "build now" at any time.
 
 </details>
 
-## Questions
+<details>
+<summary><b>Won't the tour burn tokens on a big project?</b></summary>
 
-**Won't the interview ask too many questions?**
-It asks as many as the feature needs, and only questions that pass four tests: only you can answer it, the answer changes the build, it hasn't been asked already, and you can realistically answer it. Everything else becomes a written default you can see. You can say "build now" at any time.
+It reads in tiers: it lists every file, outlines every source file, and reads only the core paths in full, sending big folders to helper agents. It saves the result with the commit it was made at, so next time it only re-reads folders that changed.
 
-**Won't the tour cost a lot of tokens?**
-It reads in tiers: it lists every file, outlines every source file, and reads only the core paths in full. It saves the result with the commit it was made at, so next time it only re-reads folders that changed.
+</details>
 
-**Will I get flooded with explanations?**
+<details>
+<summary><b>Will I get flooded with explanations?</b></summary>
+
 No. Read-only actions get nothing, easy-to-undo ones get one line, and only hard-to-undo or irreversible actions get the full card.
 
-**Can I trust the explanations?**
-They come from the same AI that proposed the action, so treat them as a helper, not a guarantee. The skills require file and line references, honest "I'm not sure" statements, and a "Check this" line on risky actions.
+</details>
 
-## Built on what already works
+<details>
+<summary><b>Can I trust the explanations?</b></summary>
 
-These skills combine the best ideas from existing projects and research rather than reinventing them:
+They come from the same AI that proposed the action, so treat them as a helper, not a guarantee. The skills require file and line references, honest "I'm not sure" statements, and a "Check this" line on risky actions. The hook is a safety net, not a security boundary.
+
+</details>
+
+<details>
+<summary><b>Does it work with other coding agents?</b></summary>
+
+It's built and tested for Claude Code. The skills are plain Markdown, so the ideas transfer, but other agents haven't been tested.
+
+</details>
+
+## 🧪 Built on what already works
+
+<details>
+<summary>The research and projects behind every design choice</summary>
 
 - **Interview:** the question taxonomy and recommended-answer pattern of [GitHub Spec Kit](https://github.com/github/spec-kit)'s `/clarify`; the size triage of [superpowers](https://github.com/obra/superpowers) brainstorming; Anthropic's "interview, write a spec, build in a fresh session" workflow; EARS requirement sentences; Volere's rule that every requirement needs a testable check; and findings from Ambig-SWE, HumanEvalComm, SAGE-Agent and ClarifyCodeBench on which questions actually help.
 - **Tour:** the step format and verified anchors of [code-tour](https://github.com/github/awesome-copilot/tree/main/skills/code-tour); beginner chapters with analogies from [PocketFlow Tutorial-Codebase-Knowledge](https://github.com/The-Pocket/PocketFlow-Tutorial-Codebase-Knowledge); the "Where to Look" table from ECC's onboarding skill; ranked repo maps from [Aider](https://aider.chat/docs/repomap.html).
-- **Explain and the hook:** risk-tiered warnings from security research on warning habituation, and dangerous-command patterns inspired by [dcg](https://github.com/Dicklesworthstone/destructive_command_guard) and similar guards. For a more thorough command guard, use one of those alongside this hook.
+- **Explain and the hook:** risk-tiered warnings from security research on warning habituation, and dangerous-command patterns inspired by [dcg](https://github.com/Dicklesworthstone/destructive_command_guard). For a stronger command guard, use one alongside this hook.
 
-The full research report behind these choices is summarized in [docs/how-it-works.md](docs/how-it-works.md).
+The full reasoning, with numbers, is in [docs/how-it-works.md](docs/how-it-works.md).
 
-## Contributing
+</details>
 
-Real before/after examples, new hook patterns and fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then open an [issue](https://github.com/ssaaffaakk/every-corner-skills/issues) or a pull request. Issues labeled `good first issue` are a good place to start.
+## 🤝 Contributing
 
-## License
+Real before/after stories, new hook patterns and fixes are all welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), or pick an issue labeled [`good first issue`](https://github.com/ssaaffaakk/every-corner-skills/labels/good%20first%20issue). Tried it on a real project? [Tell us how it went](https://github.com/ssaaffaakk/every-corner-skills/issues/7).
 
-[MIT](LICENSE)
+<div align="center">
+
+**If every corner saved you an hour, a ⭐ helps other developers find it.**
+
+[MIT](LICENSE) © every-corner-skills contributors
+
+</div>
