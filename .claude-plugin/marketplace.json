@@ -9,8 +9,8 @@
   "plugins": [
     {
       "name": "every-corner",
-      "description": "Tour any codebase in plain English, get interviewed before building so features land right the first time, and see every risky command explained before you approve it.",
-      "version": "1.0.0",
+      "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, and explains every risky command before you click Accept.",
+      "version": "1.0.1",
       "author": {
         "name": "ssaaffaakk"
       },

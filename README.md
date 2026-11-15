@@ -15,7 +15,7 @@
 
 <p>
   <a href="#-install-in-30-seconds"><b>Install</b></a> ·
-  <a href="#-pick-what-you-need"><b>Skills</b></a> ·
+  <a href="#-meet-the-skills"><b>Skills</b></a> ·
   <a href="#-see-it-in-action"><b>Demo</b></a> ·
   <a href="#-how-it-works"><b>How it works</b></a> ·
   <a href="#-faq"><b>FAQ</b></a>
@@ -66,15 +66,44 @@ The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
 
 </details>
 
-## 🧭 Pick what you need
+## 🧭 Meet the skills
 
-| You are... | Just say | Skill | You get |
-|---|---|---|---|
-| 🏠 **New to a project** | *"Give me a tour of this project."* | `every-corner-tour` | The project explained like a friend would: one real flow told as a story, a map, the gotchas, and proof of which folders were covered. |
-| 🧱 **About to build something** | *"Interview me, I want to add favorites."* | `every-corner-interview` | Every question that changes the build (and nothing it could look up), then a spec, then a build that matches it the first time. |
-| 🛑 **Approving what the AI does** | *Nothing, it's automatic.* | `every-corner-explain` | Risky actions explained in plain English before you click Accept. Safe ones stay quiet. |
+| If you're... | Use | Just say |
+|---|---|---|
+| 🏠 new to a project | **every-corner-tour** | *"Give me a tour of this project."* |
+| 🧱 about to build something | **every-corner-interview** | *"Interview me, I want to add favorites."* |
 
-Plus a **safety-net hook** that catches dangerous shell commands (`rm -rf`, `git push --force`, `DROP TABLE` and more) even if the AI forgets to explain. It's on by default; switch it off with `/plugin configure every-corner@every-corner-skills`.
+🛑 **every-corner-explain** needs no command: it steps in on its own whenever Claude asks for permission to do something risky.
+
+### 🏠 every-corner-tour: *finally understand the codebase*
+
+> You just joined a project and have no idea how it fits together. Get the tour a senior teammate would give you on day one, without having to ask.
+
+- 📖 **A story, not a file list.** One real flow, from the user's click to the database, told step by step.
+- 🗺️ **A map you can use.** A diagram, a glossary, and a "where to look when you want to…" table.
+- ⚠️ **The gotchas, up front.** The hacks and traps in the code, with the git history explaining why they're there.
+- ✅ **Proof it read every corner.** Every folder is marked explained, mentioned, or skipped and why. Nothing is skipped silently.
+- 💾 **Remembered.** Saved to `TOUR.md`; next time it only re-reads what changed.
+
+### 🧱 every-corner-interview: *built right the first time*
+
+> Stop rebuilding features the AI guessed wrong. It asks what only you know, writes it down, and then builds exactly that.
+
+- 🔍 **Reads before it asks.** It never asks what your code already answers.
+- 🎯 **One-click questions.** Each has a recommended answer. As many as the feature needs, none wasted.
+- 🧩 **Catches what AI usually misses.** Empty states, duplicates, sort order, deleted data, two users at once.
+- 📝 **A spec you can hold it to.** Every requirement gets a testable "done" check.
+- 🔁 **Builds, then checks itself.** When it's done, it reviews the result against the spec, line by line.
+
+### 🛑 every-corner-explain: *never click Accept blindly again*
+
+> Know exactly what you're approving. Risky actions come in plain English, with a way back.
+
+- 🤫 **Quiet when it's safe.** Reading and searching get no interruptions; you only hear about what matters.
+- ⛔ **Impossible to miss when it's not.** Irreversible actions get their own unmistakable warning.
+- ↩️ **Always tells you the way back.** Every warning says how to undo it, or that you can't.
+- 🛟 **Offers the safer option.** For example `--force-with-lease` instead of `--force`.
+- 🧯 **Backed by a safety net.** A built-in hook catches `rm -rf`, `git push --force`, `DROP TABLE` and more, even if the AI forgets to explain. On by default; switch it off with `/plugin configure every-corner@every-corner-skills`.
 
 ## 🎬 See it in action
 
