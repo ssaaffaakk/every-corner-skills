@@ -1,57 +1,68 @@
 # safak-skills
 
-**Claude Code skills that help you understand what the AI is doing, before and while it does it.**
+**Claude Code skills that make the AI work like a good senior developer: it understands your project, asks the right questions before building, and explains every risky step in plain English.**
 
 ## The problem
 
-When you use Claude Code in manual mode, it keeps asking for permission:
+Working with an AI coding agent usually goes wrong in one of three ways:
+
+1. **You don't understand the project, and neither does the AI.** It edits code without knowing how the pieces fit together.
+2. **The AI guesses what you meant.** You say "add favorites", it builds *its* idea of favorites, and you find out it's wrong after the code is written.
+3. **You click Accept without understanding.** In manual mode it keeps asking things like this, and beginners just approve:
 
 ```
 Run command: git push --force origin feature/login
 [ Accept ]  [ Reject ]
 ```
 
-If you are new, you do not know what that does. So you click **Accept** and hope. And when Claude builds the wrong thing, you only find out after the code is written.
+Research backs this up. When requirements are incomplete, AI code accuracy drops by 35-52%, yet models ask clarifying questions in under 40% of cases. Users approve 93% of permission prompts, and people stop reading a repeated warning after the second time.
 
-## What this repo gives you
+## The three skills
 
-| | What it is | In one sentence |
+Think of your project as a house.
+
+| Skill | When | What it does |
 |---|---|---|
-| 🔎 **plan-every-corner** | A skill | Before writing code, Claude looks around the project like a senior developer and shows you a short plan to approve. |
-| 💬 **explain-before-approve** | A skill | Before every permission prompt, Claude explains in plain words what it is about to do and whether you can undo it. |
-| 🛟 **explain-risky-commands** | An optional hook | Adds a plain-language warning to dangerous commands like `rm -rf` or `git push --force`, even if Claude forgets. |
+| 🏠 **every-corner-tour** | You join or return to an existing project | Reads every corner of the house and explains how it works, like a friend showing you around. Proves what it covered. |
+| 🧱 **every-corner-interview** | You want to build a new feature or project | Treats your request as a new room. Reads the project first, then asks every question that would change the build, and only those, until the room is fully described. Then it builds it in one go. |
+| 🛑 **every-corner-explain** | While the AI works | Before each risky action, explains in plain English what will happen and whether it can be undone. Safe actions stay quiet. |
 
-## See it in action
+Plus an optional **safety-net hook** that catches dangerous shell commands even if the AI forgets.
 
-The same command, before and after:
-
-**Before:** `Run command: git push --force origin feature/login`
-
-**After:**
-
-> **What:** Replace the `feature/login` branch on the server with the version on your computer.
-> **Why:** You cleaned up your commits, so a normal push is rejected.
-> **Changes:** The shared branch on the server. Other people's commits on it will be removed.
-> **Undo:** Hard to undo.
-> **Check this:** Nobody else is working on this branch.
-
-Now you can decide, instead of guessing.
-
-## How it works
+## How they work together
 
 ```mermaid
 flowchart LR
-    A["You ask for a change"] --> B["Claude looks around<br/>(plan-every-corner)"]
-    B --> C["You read a short plan<br/>and fix wrong guesses"]
-    C --> D["Claude does the work"]
-    D --> E["Every permission prompt<br/>comes with a plain explanation<br/>(explain-before-approve)"]
+    T["🏠 Tour<br/>explains the project"] -->|"TOUR.md"| I["🧱 Interview<br/>asks only what the<br/>code can't answer"]
+    I -->|"spec file"| B["Build<br/>in one go"]
+    B --> E["🛑 Explain<br/>each risky step:<br/>'step 3 of your spec'"]
 ```
 
-1. **Look around first.** Claude checks the files, the config, the history and the surprises hiding in the code. It reports what it found, what it only guessed, and what it plans to do.
-2. **You correct the guesses.** Fixing a wrong guess in a plan takes 30 seconds. Fixing it in finished code takes much longer.
-3. **Understand each step.** While Claude works, every permission prompt says what, why, what changes, and whether it can be undone.
+Each skill hands its notes to the next one. The tour writes `docs/every-corner/TOUR.md`, so the interview skips every question the tour already answered. The interview writes `docs/every-corner/specs/<feature>.md`, so the build follows exactly what you agreed and each explanation can point to it.
 
-Want the full detail? Read [how it works](docs/how-it-works.md).
+## See it in action
+
+**Interview:** you say *"Add a favorites feature."* Instead of guessing, Claude reads the project, then asks:
+
+> **A user favorites a recipe that the author later deletes. What should they see?**
+> ○ It disappears from their favorites quietly (Recommended)
+> ○ A grey "This recipe was removed" placeholder
+
+It keeps asking until every part of the room is clear: one question for a small change, twenty for a big one. It never asks something it could have looked up. Then it writes the spec and builds.
+
+**Explain:** the same force push, after:
+
+```
+⛔ CANNOT BE UNDONE
+What: Replace the feature/login branch on the server with your local copy.
+Why: You cleaned up your commits, so a normal push is rejected.
+Changes: The shared branch on the server.
+Undo: Not possible. Teammates' commits on that branch would be lost.
+Safer option: git push --force-with-lease (refuses to overwrite work you haven't seen).
+Check this: Nobody else is working on this branch.
+```
+
+Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md)
 
 ## Install (2 minutes)
 
@@ -64,44 +75,52 @@ git clone https://github.com/ssaaffaakk/safak-skills.git
 cd safak-skills
 ```
 
-**2. Copy the two skills**
+**2. Copy the three skills**
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -R skills/plan-every-corner ~/.claude/skills/
-cp -R skills/explain-before-approve ~/.claude/skills/
+cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-explain ~/.claude/skills/
 ```
 
 **3. Start a new Claude Code session.** Skills load when a session starts.
 
-That is it. To use them, ask for a task and say **"use plan-every-corner"**. The explanations appear on their own when Claude asks for permission.
+**Use them:**
 
-To install them in one project only, copy them into that project's `.claude/skills/` folder instead. Your team then gets them too.
+- New to a project? Say *"Give me a tour of this project."*
+- Building something? Say *"Interview me, I want to add <your feature>."*
+- The explanations before risky actions appear on their own.
 
-> **Optional:** the safety-net hook for dangerous commands needs one extra setup step. See [hooks/README.md](hooks/README.md).
+To install them for one project only (so your team gets them too), copy them into that project's `.claude/skills/` folder instead.
+
+> **Optional:** the safety-net hook needs one extra setup step. See [hooks/README.md](hooks/README.md).
 
 ## Questions
 
-**Does it make Claude slower?**
-A little, at the start. The look-around step takes a minute, and it saves you from rebuilding things that were built on a wrong guess. Tiny changes, like fixing a typo, skip it.
+**Won't the interview ask too many questions?**
+It asks as many as the feature needs, and only questions that pass four tests: only you can answer it, the answer changes the build, it hasn't been asked already, and you can realistically answer it. Everything else becomes a written default you can see. You can say "build now" at any time.
+
+**Won't the tour cost a lot of tokens?**
+It reads in tiers: it lists every file, outlines every source file, and reads only the core paths in full. It saves the result with the commit it was made at, so next time it only re-reads folders that changed.
 
 **Will I get flooded with explanations?**
-No. Safe, read-only actions get one line or nothing. Only risky actions get the full explanation.
+No. Read-only actions get nothing, easy-to-undo ones get one line, and only hard-to-undo or irreversible actions get the full card.
 
 **Can I trust the explanations?**
-They come from the same AI that proposed the action, so they can be wrong. That is why the skills require evidence (file and line numbers), honest "I'm not sure" statements, and a "Check this" line on risky actions. Treat the explanation as a helper, not as a guarantee.
+They come from the same AI that proposed the action, so treat them as a helper, not a guarantee. The skills require file and line references, honest "I'm not sure" statements, and a "Check this" line on risky actions.
 
-**Does it work with other AI coding tools?**
-These are written for Claude Code. The ideas should transfer, but we have not tested them elsewhere.
+## Built on what already works
 
-## Examples
+These skills combine the best ideas from existing projects and research rather than reinventing them:
 
-- [A full plan-every-corner report](examples/room-report-example.md)
-- [Permission explanations, before and after](examples/permission-explanations.md)
+- **Interview:** the question taxonomy and recommended-answer pattern of [GitHub Spec Kit](https://github.com/github/spec-kit)'s `/clarify`; the size triage of [superpowers](https://github.com/obra/superpowers) brainstorming; Anthropic's "interview, write a spec, build in a fresh session" workflow; EARS requirement sentences; Volere's rule that every requirement needs a testable check; and findings from Ambig-SWE, HumanEvalComm, SAGE-Agent and ClarifyCodeBench on which questions actually help.
+- **Tour:** the step format and verified anchors of [code-tour](https://github.com/github/awesome-copilot/tree/main/skills/code-tour); beginner chapters with analogies from [PocketFlow Tutorial-Codebase-Knowledge](https://github.com/The-Pocket/PocketFlow-Tutorial-Codebase-Knowledge); the "Where to Look" table from ECC's onboarding skill; ranked repo maps from [Aider](https://aider.chat/docs/repomap.html).
+- **Explain and the hook:** risk-tiered warnings from security research on warning habituation, and dangerous-command patterns inspired by [dcg](https://github.com/Dicklesworthstone/destructive_command_guard) and similar guards. For a more thorough command guard, use one of those alongside this hook.
+
+The full research report behind these choices is summarized in [docs/how-it-works.md](docs/how-it-works.md).
 
 ## Contributing
 
-New hook patterns, real before/after examples and fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then open an [issue](https://github.com/ssaaffaakk/safak-skills/issues) or a pull request. Issues labeled `good first issue` are a good place to start.
+Real before/after examples, new hook patterns and fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then open an [issue](https://github.com/ssaaffaakk/safak-skills/issues) or a pull request. Issues labeled `good first issue` are a good place to start.
 
 ## License
 

@@ -1,92 +1,146 @@
 # How it works
 
-This page explains the ideas behind the skills in more detail. If you only want to use them, the [README](../README.md) is enough.
+This page explains the design behind the three skills and the evidence for each choice. If you only want to use them, the [README](../README.md) is enough.
 
-## The room metaphor (plan-every-corner)
+## The idea: your project is a house
 
-Before writing code, a senior developer works out what is in the "room" the task lives in. The skill follows the same path, ordered by how likely each area is to change the plan.
+| Skill | The house version | Writes |
+|---|---|---|
+| `every-corner-tour` | Someone shows you around a house that is already built | `docs/every-corner/TOUR.md` |
+| `every-corner-interview` | You describe a new room; someone asks what it needs before building | `docs/every-corner/specs/<feature>.md` |
+| `every-corner-explain` | Before knocking down a wall, someone tells you it can't be put back | nothing (it talks to you) |
+
+## every-corner-tour
+
+**Goal:** you understand the logic of the project, as if a friend explained it, and you can check that nothing was skipped.
 
 ```mermaid
 flowchart TD
-    R["<b>The room</b><br/>What exactly is asked?<br/>What does done look like?"]
-    D["<b>The desk</b><br/>Files to change, who calls them,<br/>tests that cover them"]
-    W["<b>The drawers</b><br/>Config, schemas, conventions,<br/>CI and lint rules"]
-    U["<b>Under the rug</b><br/>TODO/HACK comments, git history,<br/>hidden references, flaky tests"]
-    O["<b>The doors</b><br/>Databases, APIs, anything that<br/>leaves the machine or is hard to undo"]
-    P["<b>Room report</b><br/>Findings, guesses, plan, risks"]
-    R --> D --> W --> U --> O --> P
+    C["0. Reuse<br/>TOUR.md exists? re-tour only changed folders"] --> L0["1. Inventory<br/>list every file, mark generated/vendor as skipped"]
+    L0 --> L1["2. Outline<br/>signatures of every source file<br/>(helper agents per folder on big repos)"]
+    L1 --> L2["3. Read the core fully<br/>entry points, core path, config"]
+    L2 --> F["4. Trace one real flow<br/>start to finish"]
+    F --> S["5. Hunt surprises<br/>TODO/HACK, git blame, hidden config"]
+    S --> V["6. Verify every file:line"]
+    V --> W["7. Write TOUR.md<br/>story, map, concepts, ledger"]
 ```
 
-| Part of the room | What to look for | Mistake it prevents |
+**Key choices:**
+
+- **Every corner, in tiers.** Reading every line of a big project is unaffordable and doesn't help understanding. Listing every file, outlining every source file and reading only the core fully covers every corner at a fraction of the cost. Projects under about 50 source files are read fully.
+- **Coverage ledger.** Every folder gets a row: Explained, Mentioned, Skipped (with a reason) or Unknown. Auto-wiki tools are reported to skip folders silently; the ledger makes that visible.
+- **Verified references.** Every `file:line` is re-checked before it is written, following the code-tour validator. The README is treated as a claim to check.
+- **Concepts, basic to advanced.** Each one says what you're looking at, how it works, why it matters, and the gotcha.
+- **Cached by commit.** `TOUR.md` records the commit it was written at, so the next session only re-reads folders that changed.
+
+## every-corner-interview
+
+**Goal:** the whole room is described before any code, so it can be built right the first time.
+
+```mermaid
+flowchart TD
+    S["1. Size the room<br/>T0 fix ... T4 new project"] --> R["2. Read before asking<br/>TOUR.md or a quick look at the code"]
+    R --> D["3. Draft the spec<br/>with best guesses; mark each row<br/>Discovered / Defaulted / Open"]
+    D --> Q["4-5. Ask every Open question<br/>that passes the four tests"]
+    Q --> X{"6. Stopping rule met?"}
+    X -- no --> Q
+    X -- yes --> C["7. Confirm a short summary"]
+    C --> B["8. Build<br/>same session (T0-T2) or fresh (T3-T4)<br/>then review against the spec"]
+```
+
+### What the research says
+
+| Finding | Source | What the skill does |
 |---|---|---|
-| **Room** | The task in two sentences, and an observable "done" | Building the wrong thing |
-| **Desk** | Files, callers, tests | Breaking a caller you did not know about |
-| **Drawers** | Config, schema, conventions, CI | Inventing a new pattern, or a change CI will reject |
-| **Under the rug** | TODOs, history, hidden references, flaky tests | Bringing back a bug someone fixed on purpose |
-| **Doors** | External systems, irreversible actions | A side effect nobody expected |
+| Missing requirements drop accuracy by 35-52% | HumanEvalComm | Interview before building |
+| Asking recovers 80-89% of full-spec performance | Ambig-SWE | Interview before building |
+| Over 60% of model responses guessed instead of asking | HumanEvalComm | The skill asks deliberately |
+| Strong models explore first and need about half the questions | Ambig-SWE | Read the code before asking |
+| The best agents ask few, high-value questions | SAGE-Agent | Four-test filter, not a quota |
+| Ordering, comparison and collection rules are missed over 80% of the time | ClarifyCodeBench | Always check data semantics |
+| Closed questions go unanswered 1-2% of the time, open ones about 18% | Pew Research | Multiple choice with options |
+| Every requirement needs a measurable test of success | Volere | The stopping rule |
 
-### Rules that keep it useful
+### Room sizes
 
-- **Only look at what could change the plan.** Stop when one more search would not change what Claude would do.
-- **Every claim has evidence:** a `file:line`, a command that was run, or a commit. Anything not checked is labeled **assumed**.
-- **Missing things are reported too:** "searched for X, found nothing."
-- **Depth matches risk.** A typo gets no look-around. Auth or database changes get the full pass.
-- **At most three questions**, only where the answer changes the plan, each with a default so you can just say "go".
+The size sets how much to read and how big the spec is. **It never caps the questions.** Hidden complexity can only move the size up.
 
-See a complete [example report](../examples/room-report-example.md).
+| Tier | Signals | Spec | Build |
+|---|---|---|---|
+| T0 Fix | One obvious change | none | same session |
+| T1 Small | One behavior, one place | half a page | same session |
+| T2 Medium | Several behaviors, stored data | 1-3 pages | same session |
+| T3 Large | New data model, APIs, auth or payments | 3-8 pages | fresh session |
+| T4 New project | Empty folder, new product | split into sub-rooms | fresh session per sub-room |
 
-## Permission explanations (explain-before-approve)
+### The four tests for a question
 
-Every explanation has four lines: **What**, **Why**, **Changes**, **Undo**. Risky actions get a fifth: **Check this**.
+A question is asked only when all four hold:
 
-The effort is scaled to the risk so explanations do not turn into noise:
+1. Only the user can answer it.
+2. The answer changes the code, data or tests.
+3. It has not been asked already.
+4. The user can realistically answer it (no library choices for non-technical users).
 
-| Level | Examples | What Claude writes |
+Anything else becomes a written default in the spec's Assumptions section.
+
+### The room checklist
+
+Purpose · Size and non-goals · Contents (data, identity, lifecycle, integrations) · Behavior (including empty, loading and error states) · Edge cases · **Data semantics** (ordering, duplicates, comparison, empty collections, units, precision, atomicity) · Constraints · Terminology · Done checks.
+
+### Stopping rule
+
+The interview ends only when no ledger row is Open, every requirement has a testable done check, no remaining choice would change the build, and the data-semantics rows have been checked. There is no question cap and no checkpoint pause. The user can say "build now" at any time; open items then become defaults marked as risks.
+
+### Why one spec file per feature
+
+Users of multi-file spec systems complained about ceremony and review burden (one Kiro bug fix turned into 16 acceptance criteria). One file per feature, sized to the tier, keeps the record without the paperwork. Large features are built in a fresh session from the spec, following Anthropic's documented workflow, so the interview transcript doesn't fill the context.
+
+## every-corner-explain
+
+**Goal:** approvals people actually read.
+
+Users approve 93% of permission prompts (Anthropic), and attention to a warning drops sharply after the second exposure (Anderson, Vance et al.). So explanations are **rare and scaled to risk**, and the most dangerous ones **look different**.
+
+| Level | Examples | Explanation |
 |---|---|---|
-| Quiet | Read files, search, `git status` | Nothing, or one line |
-| Standard | Edit project files, run tests, build | The four lines |
-| Careful | Delete, install, migrate, network calls, `git push`, `sudo` | The four lines plus "Check this" |
+| 1. Read-only | read, search, `git status` | none |
+| 2. Easy to undo | edit tracked files, build, create a branch | one line |
+| 3. Hard to undo | migrations, `git push`, deleting untracked files | `⚠️ HARD TO UNDO` card |
+| 4. Cannot be undone | `rm -rf`, force push, `DROP TABLE`, publishing | `⛔ CANNOT BE UNDONE` card with a safer option |
 
-More in [permission-explanations.md](../examples/permission-explanations.md), including what Claude says when it honestly does not know what a command does.
+The card leads with the undo label, then What, Why, Changes, Undo and "Check this". The "Why" is based on the actual command, never on text read from a file, so a malicious file cannot talk its way into a reassuring explanation.
 
 ## The hook
 
-A skill depends on the AI remembering to follow it. A hook is a small script that runs every time, so it never forgets. [`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) checks each shell command and, for dangerous ones, attaches a plain-language warning to the permission prompt.
+[`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) (34 cases) and CI.
 
-| Command pattern | Warning |
-|---|---|
-| `rm -rf` | Deletes permanently, no trash and no undo |
-| `git push --force` | Overwrites the server branch; teammates' work can be lost |
-| `git reset --hard` | Throws away uncommitted changes |
-| `git clean -f` | Deletes untracked files that cannot be recovered |
-| `curl ... \| sh` | Runs a downloaded script without you seeing it |
-| `sudo` | Runs with administrator rights |
-| `DROP TABLE`, `TRUNCATE TABLE` | Permanently removes database data |
-| `chmod 777` | Opens files to every user on the machine |
-
-Safe commands pass through silently. The hook never blocks anything by itself; it only makes the normal prompt clearer.
-
-> **A safety net, not a security boundary.** Pattern matching is easy to get around and will miss things. For hard guarantees, use Claude Code's permission rules and a sandbox.
+> **A safety net, not a security boundary.** Pattern matching is easy to evade. For a stronger guard, combine it with a dedicated tool such as dcg or cc-safety-net, and use Claude Code's permission rules.
 
 ## Honest limits
 
-- It raises the odds of a clean first attempt. It does not guarantee one. Some knowledge lives in people's heads, not in files, and the report lists that under "assumed".
-- The explanation comes from the same model that proposed the action, so a wrong plan can arrive with a confident explanation.
-- Explanations can become noise. Keep the three-level scheme, and edit the table in `explain-before-approve/SKILL.md` if your team finds it too chatty.
+- No published study yet ties these techniques to one-shot build success with real developers. The evidence comes from benchmarks with simulated users, survey research and security-warning studies.
+- The room-size boundaries and screen batching are judgment calls, to be tuned with real use.
+- A tour is a verified map, not a full audit; the ledger tells you what was only outlined or skipped.
+- Explanations come from the same model that proposed the action.
 
 ## Repo layout
 
 ```
 safak-skills/
 ├── skills/
-│   ├── plan-every-corner/SKILL.md
-│   └── explain-before-approve/SKILL.md
+│   ├── every-corner-tour/SKILL.md
+│   ├── every-corner-interview/SKILL.md
+│   └── every-corner-explain/SKILL.md
 ├── hooks/
 │   ├── explain-risky-commands.sh
 │   ├── test-hook.sh
 │   └── README.md
 ├── examples/
-├── docs/
+│   ├── tour-example.md
+│   ├── interview-example.md
+│   └── permission-explanations.md
+├── docs/how-it-works.md
 ├── .github/               (issue and pull request templates, CI)
 ├── CONTRIBUTING.md
 └── LICENSE

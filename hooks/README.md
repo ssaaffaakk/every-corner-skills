@@ -1,8 +1,17 @@
 # The safety-net hook
 
-`explain-risky-commands.sh` adds a plain-language warning to dangerous shell commands. It is optional. The skills work without it.
+`explain-risky-commands.sh` checks every shell command Claude wants to run and sorts it into four risk levels:
 
-**What you need:** `jq` (`brew install jq` on macOS, `sudo apt install jq` on Linux).
+| Level | Examples | What happens |
+|---|---|---|
+| 1. Read-only | `ls`, `git status` | Passes silently |
+| 2. Easy to undo | `git push`, `npm test`, `rm file.txt` | Passes silently |
+| 3. Hard to undo | `sudo`, `chmod 777`, `git branch -D`, `--no-verify` | Asks you, with a `⚠️ HARD TO UNDO` warning |
+| 4. Cannot be undone | `rm -rf`, `git push --force`, `git reset --hard`, `DROP TABLE`, `npm publish`, `curl \| sh` | Asks you, with a `⛔ CANNOT BE UNDONE` warning and a safer option |
+
+Only levels 3 and 4 interrupt you, because warnings shown on every command stop being read. The hook never blocks anything by itself. It is optional: the skills work without it.
+
+**You need:** `jq` (`brew install jq` on macOS, `sudo apt install jq` on Linux).
 
 ## Install
 
@@ -41,14 +50,14 @@ If you already have a `hooks` section, add this entry to it instead of replacing
 ./hooks/test-hook.sh
 ```
 
-This runs a list of safe and dangerous example commands and checks that the right ones are flagged.
+This runs 34 example commands and checks that each lands at the right level.
 
 ## Add a new pattern
 
-1. Add a new `elif match '...'` branch with a short, plain-language `reason` in `explain-risky-commands.sh`.
+1. Add an `elif` branch to `explain-risky-commands.sh` in the right section. Use `cannot "<what it does>" "<safer option>"` for level 4 or `hard "<what it does>" "<safer option>"` for level 3. Write the warning in plain English and say what is lost.
 2. Add one dangerous example and one similar-looking safe example to `test-hook.sh`.
 3. Run `./hooks/test-hook.sh` and open a pull request.
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for the style rules on warning messages.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for the wording rules.
 
-> This hook is a safety net, not a security boundary. It cannot catch everything.
+> **A safety net, not a security boundary.** Pattern matching can be evaded, and the hook will miss things. For a stronger guard, combine it with a dedicated tool such as [dcg](https://github.com/Dicklesworthstone/destructive_command_guard), and use Claude Code's permission rules.
