@@ -76,6 +76,8 @@ Pick the most important thing the project does (a user signs up, a request comes
 
 Every `file:line` you will cite must exist and point at the right code. Re-open and check it. Never guess line numbers. If you could not confirm something, say "I think..., but I could not confirm it."
 
+Write every path **in full, from the project root, exactly as it exists**: `migrations/versions/4b2c1a9d_add_user_table.py:19`, never `4b2c1a9d_...py:19`. Do not shorten paths with `...` or `…`, even long ones. A reference the reader cannot open is a broken reference. If a path is too long for a sentence, put the reference in a table or on its own line instead.
+
 ## Step 7: Write the tour
 
 Write `tour_file` with this structure:
@@ -147,6 +149,6 @@ In chat, give a short friendly summary (the one-sentence description, the story'
 
 - Restating the README. Listing folders without explaining how they work together.
 - Claiming coverage of code you did not read. Silently skipping a folder.
-- Guessed line numbers or file paths.
+- Guessed line numbers or file paths, or paths shortened with `...`.
 - Five diagrams. Walls of jargon. Explaining *what* without *why*.
 - Editing project files during a tour (only `tour_file` and its chapters are written).
