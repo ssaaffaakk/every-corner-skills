@@ -127,7 +127,7 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 ## Repo layout
 
 ```
-safak-skills/
+every-corner-skills/
 ├── skills/
 │   ├── every-corner-tour/SKILL.md
 │   ├── every-corner-interview/SKILL.md

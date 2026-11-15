@@ -1,4 +1,4 @@
-# safak-skills
+# every-corner-skills
 
 **Claude Code skills that make the AI work like a good senior developer: it understands your project, asks the right questions before building, and explains every risky step in plain English.**
 
@@ -71,8 +71,8 @@ You need [Claude Code](https://claude.com/claude-code) and a terminal.
 **1. Get the files**
 
 ```bash
-git clone https://github.com/ssaaffaakk/safak-skills.git
-cd safak-skills
+git clone https://github.com/ssaaffaakk/every-corner-skills.git
+cd every-corner-skills
 ```
 
 **2. Copy the three skills**
@@ -120,7 +120,7 @@ The full research report behind these choices is summarized in [docs/how-it-work
 
 ## Contributing
 
-Real before/after examples, new hook patterns and fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then open an [issue](https://github.com/ssaaffaakk/safak-skills/issues) or a pull request. Issues labeled `good first issue` are a good place to start.
+Real before/after examples, new hook patterns and fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), then open an [issue](https://github.com/ssaaffaakk/every-corner-skills/issues) or a pull request. Issues labeled `good first issue` are a good place to start.
 
 ## License
 
