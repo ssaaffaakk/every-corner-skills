@@ -1,0 +1,28 @@
+{
+  "name": "every-corner",
+  "version": "1.0.0",
+  "description": "Make Claude Code work like a senior developer: tour any codebase in plain English, get interviewed before building so features land right the first time, and see every risky command explained before you approve it.",
+  "author": {
+    "name": "ssaaffaakk",
+    "url": "https://github.com/ssaaffaakk"
+  },
+  "homepage": "https://github.com/ssaaffaakk/every-corner-skills",
+  "repository": "https://github.com/ssaaffaakk/every-corner-skills",
+  "license": "MIT",
+  "keywords": [
+    "onboarding",
+    "requirements",
+    "spec-driven-development",
+    "code-safety",
+    "beginners",
+    "senior-developer"
+  ],
+  "userConfig": {
+    "safetynet": {
+      "type": "boolean",
+      "title": "Safety-net hook",
+      "description": "Warn before dangerous shell commands (rm -rf, git push --force, DROP TABLE and more) with a plain-English explanation and a safer option. Safe commands are never interrupted.",
+      "default": true
+    }
+  }
+}

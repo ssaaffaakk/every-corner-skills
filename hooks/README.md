@@ -13,7 +13,9 @@ Only levels 3 and 4 interrupt you, because warnings shown on every command stop 
 
 **You need:** `jq` (`brew install jq` on macOS, `sudo apt install jq` on Linux).
 
-## Install
+**Installed the plugin?** You already have the hook, switched on. Turn it off with `/plugin configure every-corner@every-corner-skills`. The steps below are only for manual installs.
+
+## Install manually
 
 **1. Copy the script and make it executable**
 

@@ -14,6 +14,15 @@
 
 set -euo pipefail
 
+# Installed as a plugin, the user can switch this off with the "Safety-net hook"
+# option. Unset (manual install) means on.
+case "${CLAUDE_PLUGIN_OPTION_SAFETYNET:-true}" in
+  false|False|FALSE|0|no|off) exit 0 ;;
+esac
+
+# Without jq we cannot read the command; stay out of the way rather than error.
+command -v jq >/dev/null 2>&1 || exit 0
+
 input="$(cat)"
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty')"
 
