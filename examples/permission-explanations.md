@@ -1,78 +1,68 @@
-# Examples: permission explanations
+# Examples: every-corner-explain
 
-> What the human sees right above the approval prompt, before and after using `explain-before-approve`.
+> What the user sees right before the approval prompt, at each of the four risk levels.
 
-## 1. Deleting a folder
-
-**Before** (what a junior sees):
-
-```
-Run command: rm -rf node_modules package-lock.json
-[ Accept ]  [ Reject ]
-```
-
-**After:**
-
-> **What:** Delete the downloaded libraries folder and the lock file, then re-install them.
-> **Why:** The install is stuck on a version conflict; a clean re-install usually fixes it (step 2 of the plan).
-> **Changes:** Only `node_modules/` and `package-lock.json` in this project. Nothing leaves your computer.
-> **Undo:** Easy to undo: `npm install` re-creates both. The lock file may pick slightly newer versions.
-> **Check this:** The command is run from the project folder, not your home folder.
-
----
-
-## 2. Installing a package
-
-**Before:**
-
-```
-Run command: npm install zod
-```
-
-**After:**
-
-> **What:** Download a validation library called `zod` and add it to the project.
-> **Why:** The plan needs to check that the sign-up form data is valid before saving it (step 3).
-> **Changes:** Adds a line to `package.json`, updates the lock file, downloads code into `node_modules/`.
-> **Undo:** Easy: `npm uninstall zod`.
-> **Check this:** `zod` is a widely used library, and the name is spelled exactly like that (typo-squatted look-alike packages exist).
-
----
-
-## 3. A force push (the dangerous one)
-
-**Before:**
-
-```
-Run command: git push --force origin feature/login
-```
-
-**After:**
-
-> **What:** Replace the `feature/login` branch on the server with the version on your computer.
-> **Why:** You rewrote local history while cleaning up commits, so the server will reject a normal push.
-> **Changes:** The shared branch on the server. Anyone else who has pushed to it will have their commits removed from it.
-> **Undo:** Hard to undo; commits that exist only on the server are lost.
-> **Check this:** Nobody else is working on this branch. If unsure, I can use `--force-with-lease`, which refuses to overwrite work you have not seen.
-
----
-
-## 4. A read-only command (stay quiet)
+## Level 1: read-only, stay quiet
 
 ```
 Run command: git status
 ```
 
-Explanation: *none needed.* One line at most: "Checking which files have changed."
+Explanation: none needed. At most: *"Checking which files changed."*
 
----
+## Level 2: easy to undo, one line
 
-## 5. When the model is not sure
+```
+Edit file: src/config.json
+```
 
-> **What:** Run the `cleanup.sh` script in the repo.
-> **Why:** The README says to run it before building.
-> **Changes:** *I haven't read the script, so I can't say what it deletes.*
-> **Undo:** Unknown.
-> **Instead:** Let me read the script first and then ask again. (Reading it changes nothing.)
+> Change the port from 3000 to 4000 in `config.json` so it doesn't clash with your other app (step 2 of the spec).
 
-This case matters most. An honest "I don't know yet" beats a confident guess.
+Several similar edits get one line together:
+
+> Rename `getUser` to `findUser` in 5 files: `auth.js`, `users.js`, `admin.js`, `profile.js`, `users.test.js`.
+
+## Level 3: hard to undo, full card
+
+```
+Run command: npm run migrate
+```
+
+```
+⚠️ HARD TO UNDO
+What: Add a new "favorites" table to the database.
+Why: Step 1 of the favorites spec you approved.
+Changes: The local database file data/app.db. Nothing leaves this computer.
+Undo: Run "npm run migrate:down" to remove the table. Existing data is not touched.
+Check this: This is the local database, not the production one.
+```
+
+## Level 4: cannot be undone, distinct card
+
+```
+Run command: git push --force origin feature/login
+```
+
+```
+⛔ CANNOT BE UNDONE
+What: Replace the feature/login branch on the server with your local copy.
+Why: You rewrote your commits, so a normal push is rejected.
+Changes: The shared branch on the server.
+Undo: Not possible. Commits that exist only on the server would be lost.
+Safer option: git push --force-with-lease (refuses to overwrite work you haven't seen).
+Check this: Nobody else is working on this branch.
+```
+
+## When Claude doesn't know
+
+```
+Run command: ./scripts/cleanup.sh
+```
+
+> I haven't read `cleanup.sh`, so I can't say what it deletes. Let me read it first (reading changes nothing), then I'll explain it properly.
+
+An honest "I don't know yet" beats a confident guess.
+
+## When the action goes beyond the request
+
+> You asked me to fix the login bug. This step would also upgrade the `express` library, which you didn't ask for. Do you want that, or should I fix the bug without upgrading?

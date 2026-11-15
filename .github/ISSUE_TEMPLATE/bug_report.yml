@@ -11,8 +11,9 @@ body:
     attributes:
       label: Which part?
       options:
-        - plan-every-corner (skill)
-        - explain-before-approve (skill)
+        - every-corner-tour (skill)
+        - every-corner-interview (skill)
+        - every-corner-explain (skill)
         - explain-risky-commands (hook)
         - Docs or examples
     validations:

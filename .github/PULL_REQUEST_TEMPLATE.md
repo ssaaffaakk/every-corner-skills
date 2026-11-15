@@ -9,7 +9,7 @@
 ## What kind of change is it?
 
 - [ ] New hook pattern
-- [ ] Skill change (`plan-every-corner` or `explain-before-approve`)
+- [ ] Skill change (`every-corner-tour`, `every-corner-interview` or `every-corner-explain`)
 - [ ] New or updated example
 - [ ] Docs or wording
 - [ ] Something else
