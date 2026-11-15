@@ -2,6 +2,11 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
+## 1.0.2 (2026-11-15)
+
+### Fixed
+- **every-corner-tour** and **every-corner-interview** now require every `file:line` reference to use the full path from the project root. In the first real-world test (a ~350-file Flask app), the tour got 61 of 63 references exactly right; the other 2 shortened long migration filenames with `...`, so readers couldn't open them.
+
 ## 1.0.1 (2026-11-15)
 
 ### Changed

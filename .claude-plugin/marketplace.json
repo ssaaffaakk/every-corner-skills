@@ -10,7 +10,7 @@
     {
       "name": "every-corner",
       "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, and explains every risky command before you click Accept.",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": {
         "name": "ssaaffaakk"
       },

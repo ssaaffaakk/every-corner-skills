@@ -62,7 +62,7 @@ Answer from the code everything you can: the stack, conventions, existing helper
 
 Create `spec_dir/<feature-slug>.md` from the template at the end of this file. Fill in every section with what you discovered and your best guesses. Then mark each row of the coverage ledger:
 
-- **Discovered:** answered by the code (cite `file:line`).
+- **Discovered:** answered by the code (cite `file:line` with the full path from the project root, never shortened with `...`).
 - **Defaulted:** you chose a sensible default the user is unlikely to care about (write the reason).
 - **Open:** needs the user.
 - **N/A:** does not apply to this room.
