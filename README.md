@@ -199,7 +199,7 @@ It's built and tested for Claude Code. The skills are plain Markdown, so the ide
 - **Tour:** the step format and verified anchors of [code-tour](https://github.com/github/awesome-copilot/tree/main/skills/code-tour); beginner chapters with analogies from [PocketFlow Tutorial-Codebase-Knowledge](https://github.com/The-Pocket/PocketFlow-Tutorial-Codebase-Knowledge); the "Where to Look" table from ECC's onboarding skill; ranked repo maps from [Aider](https://aider.chat/docs/repomap.html).
 - **Explain and the hook:** risk-tiered warnings from security research on warning habituation, and dangerous-command patterns inspired by [dcg](https://github.com/Dicklesworthstone/destructive_command_guard). For a stronger command guard, use one alongside this hook.
 
-The full reasoning, with numbers, is in [docs/how-it-works.md](docs/how-it-works.md).
+The design and its numbers are in [docs/how-it-works.md](docs/how-it-works.md), and the full research report, with 90+ sources, is in [docs/research.md](docs/research.md).
 
 </details>
 

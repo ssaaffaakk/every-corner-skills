@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- House with every corner lit -->
+  <g transform="translate(110 150) scale(1.25)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 110 L120 20 L220 110" stroke="#e2e8f0" stroke-width="10"/>
+    <path d="M45 95 V210 H195 V95" stroke="#e2e8f0" stroke-width="10"/>
+    <rect x="100" y="140" width="40" height="70" rx="4" stroke="#94a3b8" stroke-width="6"/>
+    <circle cx="45" cy="210" r="22" fill="url(#glow)" stroke="none"/>
+    <circle cx="195" cy="210" r="22" fill="url(#glow)" stroke="none"/>
+    <circle cx="45" cy="95" r="22" fill="url(#glow)" stroke="none"/>
+    <circle cx="195" cy="95" r="22" fill="url(#glow)" stroke="none"/>
+    <circle cx="45" cy="210" r="7" fill="#fbbf24" stroke="none"/>
+    <circle cx="195" cy="210" r="7" fill="#fbbf24" stroke="none"/>
+    <circle cx="45" cy="95" r="7" fill="#fbbf24" stroke="none"/>
+    <circle cx="195" cy="95" r="7" fill="#fbbf24" stroke="none"/>
+  </g>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="470" y="215" fill="#f8fafc" font-size="84" font-weight="800" letter-spacing="-1.5">every corner</text>
+    <text x="473" y="270" fill="#cbd5e1" font-size="30" font-weight="500">Claude Code that works like a senior developer</text>
+
+    <g font-size="26" font-weight="600">
+      <text x="473" y="345" fill="#f8fafc">🏠  Tours your codebase in plain English</text>
+      <text x="473" y="395" fill="#f8fafc">🧱  Interviews you before building</text>
+      <text x="473" y="445" fill="#f8fafc">🛑  Explains every risky command</text>
+    </g>
+
+    <rect x="470" y="490" width="700" height="56" rx="12" fill="#0b1220" stroke="#334155" stroke-width="2"/>
+    <text x="492" y="527" fill="#fbbf24" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">/plugin install every-corner@every-corner-skills</text>
+  </g>
+</svg>

@@ -1,6 +1,6 @@
 # How it works
 
-This page explains the design behind the three skills and the evidence for each choice. If you only want to use them, the [README](../README.md) is enough.
+This page explains the design behind the three skills and the evidence for each choice. If you only want to use them, the [README](../README.md) is enough. For the full research behind it, with every source, see the [research report](research.md).
 
 ## The idea: your project is a house
 
