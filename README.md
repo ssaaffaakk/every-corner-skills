@@ -72,7 +72,8 @@ The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
 |---|---|---|
 | 🏠 new to a project | **every-corner-tour** | *"Give me a tour of this project."* |
 | 🧱 about to build something | **every-corner-interview** | *"Interview me, I want to add favorites."* |
-| 🛑 approving what the AI does | **every-corner-explain** | *Nothing. It's automatic.* |
+
+🛑 **every-corner-explain** needs no command: it steps in on its own whenever Claude asks for permission to do something risky.
 
 ### 🏠 every-corner-tour: *finally understand the codebase*
 
