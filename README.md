@@ -104,7 +104,7 @@ Check this: Nobody else is working on this branch.
 
 Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md)
 
-## ⚙️ How it works
+## 🔧 How it works
 
 ```mermaid
 flowchart LR
