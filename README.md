@@ -64,25 +64,26 @@ Check this: Nobody else is working on this branch.
 
 Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md)
 
-## Install (2 minutes)
+## Install (1 minute)
 
-You need [Claude Code](https://claude.com/claude-code) and a terminal.
+Inside [Claude Code](https://claude.com/claude-code), run:
 
-**1. Get the files**
-
-```bash
-git clone https://github.com/ssaaffaakk/every-corner-skills.git
-cd every-corner-skills
+```
+/plugin marketplace add ssaaffaakk/every-corner-skills
+/plugin install every-corner@every-corner-skills
 ```
 
-**2. Copy the three skills**
+Or from a terminal:
 
 ```bash
-mkdir -p ~/.claude/skills
-cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-explain ~/.claude/skills/
+claude plugin marketplace add ssaaffaakk/every-corner-skills
 ```
 
-**3. Start a new Claude Code session.** Skills load when a session starts.
+```bash
+claude plugin install every-corner@every-corner-skills
+```
+
+Start a new session and you're done. You get all three skills plus the safety-net hook, for about **300 tokens per session** until a skill is actually used.
 
 **Use them:**
 
@@ -90,9 +91,23 @@ cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner
 - Building something? Say *"Interview me, I want to add <your feature>."*
 - The explanations before risky actions appear on their own.
 
-To install them for one project only (so your team gets them too), copy them into that project's `.claude/skills/` folder instead.
+**Turn off the safety-net hook:** run `/plugin configure every-corner@every-corner-skills` and switch off "Safety-net hook". The skills keep working. The hook needs `jq`; without it, the hook simply stays out of the way.
 
-> **Optional:** the safety-net hook needs one extra setup step. See [hooks/README.md](hooks/README.md).
+**Update later:** `/plugin marketplace update every-corner-skills`, then restart.
+
+<details>
+<summary>Install without the plugin system (copy the files)</summary>
+
+```bash
+git clone https://github.com/ssaaffaakk/every-corner-skills.git
+cd every-corner-skills
+mkdir -p ~/.claude/skills
+cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-explain ~/.claude/skills/
+```
+
+To install for one project only (so your team gets them too), copy them into that project's `.claude/skills/` folder instead. The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
+
+</details>
 
 ## Questions
 
