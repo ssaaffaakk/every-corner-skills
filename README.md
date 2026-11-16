@@ -151,6 +151,7 @@ The skills hand their notes to each other. The tour saves `docs/every-corner/TOU
 - **✅ Knows when it's done.** It stops asking only when every requirement has a testable "done" check.
 - **🗺️ Proves "every corner".** The tour lists every folder as explained, mentioned, or skipped and why. Nothing is skipped silently.
 - **🤫 Quiet unless it matters.** People stop reading warnings they see on every action, so safe actions get nothing and irreversible ones look different.
+- **🧪 Stress-tested to failure.** Eight adversarial scenarios, run as real sessions against a simulated difficult user. Three failed on the first run (the skill never loaded); [every failure and fix is published](docs/stress-test.md), including what is still unverified.
 - **🪶 Light.** About 300 tokens per session until a skill runs. The tour is cached by commit, so it only re-reads what changed.
 
 ## ❓ FAQ
