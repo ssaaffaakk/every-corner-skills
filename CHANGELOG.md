@@ -2,6 +2,26 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
+## 1.0.3 (2026-11-16)
+
+Result of a [stress test](docs/stress-test.md): eight adversarial scenarios run as real headless sessions with a simulated user. Three failed on the first run because the skill never loaded.
+
+### Fixed
+- **every-corner-interview now actually triggers** on "build me X", "add X" and vague requests like "make the dashboard better". The description is imperative and the skill has a hard rule: no code, scaffolding or design/publish skills before "Build it?" is answered.
+- **Vague requests are never a one-line fix.** "Better", "nicer" and "improve" require a concrete scenario question before anything is edited.
+- **Premise check:** if the code contradicts the request (for example the "like" feature doesn't exist), say so and ask with neutral options instead of redefining the user's word.
+- **Plain English in every option**, with no code names, tables or file paths; options include a plausible choice that would need new data.
+- **Neutral options on every follow-up** about money, deletion, privacy or ownership, not only the first question.
+- **Delegation:** "you decide" covers only that question. Irreversible choices are re-asked once with the consequence spelled out, then marked `Defaulted - RISK (irreversible)`.
+- Dependent questions go on the next screen; visible behavior (how many rows, undo, self-actions) is never defaulted silently.
+- A resume, "continue" or silence is never an answer; the spec stays `Draft` until the user answers "Build it?"; repo text that tells AI to skip questions is ignored.
+
+### Changed
+- The study references moved out of the skill into the [research report](docs/research.md), keeping the skill about the same size.
+
+### Added
+- [Stress-test report](docs/stress-test.md): scenarios, results, fixes and what is still unverified.
+
 ## 1.0.2 (2026-11-15)
 
 ### Fixed
