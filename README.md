@@ -131,7 +131,7 @@ Check this: Nobody else is working on this branch.
 
 > Let's follow what happens when someone opens a recipe page. Their browser asks for `/recipes/42`. The first stop is `src/server.js:12`, the front door… **The loop:** door → receptionist → desk → database → page. Almost every feature here follows it.
 
-Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md)
+Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [new project interview](examples/new-project-interview-example.md) · [explain](examples/permission-explanations.md)
 
 ## 🔧 How it works
 
