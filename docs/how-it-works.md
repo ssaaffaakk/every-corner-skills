@@ -1,6 +1,6 @@
 # How it works
 
-This page explains the design behind the three skills and the evidence for each choice. If you only want to use them, the [README](../README.md) is enough. For the full research behind it, with every source, see the [research report](research.md).
+This page explains the design behind the skills and the evidence for each choice. If you only want to use them, the [README](../README.md) is enough. For the full research behind it, with every source, see the [research report](research.md).
 
 ## The idea: your project is a house
 
@@ -9,6 +9,12 @@ This page explains the design behind the three skills and the evidence for each 
 | `every-corner-tour` | Someone shows you around a house that is already built | `docs/every-corner/TOUR.md` |
 | `every-corner-interview` | You describe a new room; someone asks what it needs before building | `docs/every-corner/specs/<feature>.md` |
 | `every-corner-explain` | Before knocking down a wall, someone tells you it can't be put back | nothing (it talks to you) |
+| `every-corner-codebase` | Copy how this house is built before adding a room | `docs/every-corner/CODEBASE.md` |
+| `every-corner-debug` | Trace a leak before repairing the wall | `docs/every-corner/debug/<bug>.md` |
+| `every-corner-verify` | Test the finished room against the plan | `docs/every-corner/verification/<change>.md` |
+| `every-corner-diff` | Walk through renovations before accepting them | `docs/every-corner/diffs/<change>.md` |
+| `every-corner-review` | Inspect a renovation for real faults | `docs/every-corner/reviews/<change>.md` |
+| `every-corner-handoff` | Leave the next builder a clear note | `docs/every-corner/HANDOFF.md` |
 
 ## every-corner-tour
 

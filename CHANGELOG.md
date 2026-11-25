@@ -2,6 +2,17 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
+## 1.1.0 (2026-11-25)
+
+### Added
+- **every-corner-codebase:** profiles cited project conventions before new code and asks when there is no precedent (issue #25).
+- **every-corner-debug:** reproduces bugs, tests competing causes, then fixes the root cause.
+- **every-corner-verify:** runs checks, records actual output and compares results with an agreed spec.
+- **every-corner-diff:** explains changed intent, downstream effects and evidence-based risks.
+- **every-corner-review:** reports verified correctness, security and style findings with severity and verification method.
+- **every-corner-handoff:** records done, partial, next actions and run instructions for a later session.
+- Thirty trigger evals (three trigger and two should-not-trigger cases per new skill) and an [external tool survey](docs/research.md).
+
 ## 1.0.5 (2026-11-25)
 
 Fixes from community reports #17-#23 and the hook gaps reported in #2, each verified against the code, the validator and the official docs before fixing.

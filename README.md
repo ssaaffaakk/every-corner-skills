@@ -8,7 +8,7 @@
   <a href="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml"><img src="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml/badge.svg" alt="Tests"/></a>
   <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fssaaffaakk%2Fevery-corner-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=f59e0b" alt="Version"/>
   <img src="https://img.shields.io/badge/Claude_Code-plugin-D97757" alt="Claude Code plugin"/>
-  <img src="https://img.shields.io/badge/always--on_cost-~300_tokens-0f172a" alt="About 300 tokens always-on"/>
+  <img src="https://img.shields.io/badge/skills-load_on_demand-0f172a" alt="Skills load on demand"/>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/ssaaffaakk/every-corner-skills?color=22c55e" alt="MIT license"/></a>
   <a href="https://github.com/ssaaffaakk/every-corner-skills/stargazers"><img src="https://img.shields.io/github/stars/ssaaffaakk/every-corner-skills?style=social" alt="GitHub stars"/></a>
 </p>
@@ -27,7 +27,7 @@
 
 Your AI coding agent is fast. But it **edits code it doesn't understand**, **builds what it guessed you meant**, and **asks you to approve commands you can't read**.
 
-**every corner** fixes all three with three small skills that make Claude Code behave like the senior developer you wish you had next to you.
+**every corner** addresses these with focused skills that make Claude Code behave like the senior developer you wish you had next to you.
 
 ## 🚀 Install in 30 seconds
 
@@ -38,7 +38,7 @@ Inside Claude Code:
 /plugin install every-corner@every-corner-skills
 ```
 
-Start a new session. That's it: three skills and a safety net, for about **300 tokens per session** until a skill is actually used.
+Start a new session. That's it: nine skills and a safety net; each skill loads when its job is needed.
 
 <details>
 <summary>Prefer the terminal, or copying files by hand?</summary>
@@ -59,7 +59,7 @@ Without the plugin system:
 git clone https://github.com/ssaaffaakk/every-corner-skills.git
 cd every-corner-skills
 mkdir -p ~/.claude/skills
-cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-explain ~/.claude/skills/
+cp -R skills/every-corner-* ~/.claude/skills/
 ```
 
 The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
@@ -72,6 +72,12 @@ The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
 |---|---|---|
 | 🏠 new to a project | **every-corner-tour** | *"Give me a tour of this project."* |
 | 🧱 about to build something | **every-corner-interview** | *"Interview me, I want to add favorites."* |
+| 🧰 adding code to an existing project | **every-corner-codebase** | *"Match this project's code style."* |
+| 🐛 chasing a bug | **every-corner-debug** | *"Reproduce and debug this failure."* |
+| ✅ checking a finished change | **every-corner-verify** | *"Prove the fix works against the spec."* |
+| 🔎 reading a PR before accepting | **every-corner-diff** | *"Explain this PR and its risks."* |
+| 🧪 asking for a code review | **every-corner-review** | *"Review this diff for real bugs."* |
+| 📦 ending a long session | **every-corner-handoff** | *"Leave a handoff for next time."* |
 
 🛑 **every-corner-explain** needs no command: it steps in on its own whenever Claude asks for permission to do something risky.
 
@@ -104,6 +110,30 @@ The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
 - ↩️ **Always tells you the way back.** Every warning says how to undo it, or that you can't.
 - 🛟 **Offers the safer option.** For example `--force-with-lease` instead of `--force`.
 - 🧯 **Backed by a safety net.** A built-in hook catches `rm -rf`, `git push --force`, `DROP TABLE` and more, even if the AI forgets to explain. On by default; switch it off with `/plugin configure every-corner@every-corner-skills`.
+
+### 🧰 every-corner-codebase: *fit the project*
+
+Reads existing code before adding a nontrivial feature. Saves cited folder, naming, error and test conventions in `docs/every-corner/CODEBASE.md`. A missing or mixed precedent becomes a question, not an invented house style. See [issue #25](https://github.com/ssaaffaakk/every-corner-skills/issues/25).
+
+### 🐛 every-corner-debug: *find the cause first*
+
+Reproduces the failure, tests two or three possible causes from cheapest to costliest, explains the root cause, then fixes and reruns the check. Saves a short record in `docs/every-corner/debug/`.
+
+### ✅ every-corner-verify: *prove the result*
+
+Runs the project's relevant checks and records their real output. If an interview spec exists, each requirement gets a Pass, Fail, Blocked or Unverified result in `docs/every-corner/verification/`.
+
+### 🔎 every-corner-diff: *understand before accepting*
+
+Groups a diff by intent, follows effects into unchanged files, and gives up to three evidence-based things to watch. Saves the explanation in `docs/every-corner/diffs/`.
+
+### 🧪 every-corner-review: *find real defects*
+
+Checks correctness, security and local style. Each finding has a severity, a failing path and a "How I verified this" line. Unknowns remain questions; the review goes in `docs/every-corner/reviews/`.
+
+### 📦 every-corner-handoff: *resume without replaying*
+
+Records what is done, what remains, the next concrete step and how to run the project in `docs/every-corner/HANDOFF.md`.
 
 ## 🎬 See it in action
 
@@ -152,7 +182,7 @@ The skills hand their notes to each other. The tour saves `docs/every-corner/TOU
 - **🗺️ Proves "every corner".** The tour lists every folder as explained, mentioned, or skipped and why. Nothing is skipped silently.
 - **🤫 Quiet unless it matters.** People stop reading warnings they see on every action, so safe actions get nothing and irreversible ones look different.
 - **🧪 Stress-tested to failure.** Two rounds of adversarial scenarios, run as real sessions against a simulated difficult user. Three failed on the first run (the skill never loaded); [every failure and fix is published](docs/stress-test.md), including what is still unverified.
-- **🪶 Light.** About 300 tokens per session until a skill runs. The tour is cached by commit, so it only re-reads what changed.
+- **🪶 Focused.** Each skill loads when its job is needed. The tour is cached by commit, so it only re-reads what changed.
 
 ## ❓ FAQ
 

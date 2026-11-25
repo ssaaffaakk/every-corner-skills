@@ -1,7 +1,7 @@
 {
   "name": "every-corner",
-  "version": "1.0.5",
-  "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, and explains every risky command before you click Accept.",
+  "version": "1.1.0",
+  "description": "Claude Code skills for understanding a project, asking the right questions, matching its conventions, debugging, verifying, explaining and reviewing changes, and handing work off safely.",
   "author": {
     "name": "ssaaffaakk",
     "url": "https://github.com/ssaaffaakk"
@@ -15,7 +15,10 @@
     "spec-driven-development",
     "code-safety",
     "beginners",
-    "senior-developer"
+    "senior-developer",
+    "debugging",
+    "code-review",
+    "verification"
   ],
   "userConfig": {
     "safetynet": {
