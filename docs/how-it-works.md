@@ -113,7 +113,7 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 
 ## The hook
 
-[`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It searches the whole command text, so a dangerous command is found wherever it sits, and errs toward an extra warning rather than a miss; heredoc text that `cat` or `tee` writes to a file is ignored. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) and CI on Linux and macOS. Setup, the off switch, headless behavior and the full list of patterns are in the [hook guide](../hooks/README.md).
+[`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It searches the whole command text, heredocs included, so a dangerous command is found wherever it sits, and it errs toward an extra warning rather than a miss. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) and CI on Linux and macOS. Setup, the off switch, headless behavior and the full list of patterns are in the [hook guide](../hooks/README.md).
 
 ## Honest limits
 

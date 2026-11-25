@@ -11,7 +11,7 @@
 
 Only levels 3 and 4 interrupt you, because warnings shown on every command stop being read. The hook never blocks anything by itself. The skills work without it.
 
-**No extra tools needed.** The hook reads the command with `jq` if it is installed, otherwise with a built-in fallback (`sed` and `awk`), so it never switches itself off for lack of a tool. It runs no Python and nothing from your project folder, and adds roughly 10-20 ms to a normal command (about 0.1 s for a very large one).
+**No extra tools needed.** The hook reads the command with `jq` if it is installed, otherwise with a built-in fallback (`sed` and `awk`), so it never switches itself off for lack of a tool. It runs no Python and nothing from your project folder. It adds roughly 10-30 ms to a normal command and stays well under a second even for a 300 KB command, far below its 10-second timeout.
 
 **Installed the plugin?** You already have the hook, switched on. Turn it off with `/plugin configure every-corner@every-corner-skills`. The steps below are only for manual installs.
 
@@ -19,7 +19,7 @@ Only levels 3 and 4 interrupt you, because warnings shown on every command stop 
 
 **Who can turn it off:** the off switch is the environment variable `CLAUDE_PLUGIN_OPTION_SAFETYNET`. Any settings file that sets environment variables for a session can set it, including a project's `.claude/settings.json`. If you open a project you don't trust, check its settings for that variable. (`EVERY_CORNER_HOOK_PARSER` is for the tests only: `raw` forces the no-`jq` fallback, and any other value is ignored.)
 
-**What it errs toward:** it searches the whole command text, so a dangerous command is found wherever it sits (after `VAR=x`, inside `if`/`for`, `( )`, `$( )`, `bash -c`, `ssh host '...'`, or a heredoc fed to a shell). The price is the occasional extra warning when a command only *mentions* one, for example in an `echo` or a commit message. Heredoc text that `cat` or `tee` writes to a file is ignored.
+**What it errs toward:** it searches the whole command text, heredoc bodies included, so a dangerous command is found wherever it sits (after `VAR=x`, inside `if`/`for`, `( )`, `$( )`, `bash -c`, `ssh host '...'`, or a heredoc). The price is an occasional extra warning when a command only *mentions* one, for example in an `echo`, a commit message or a file written with `cat <<EOF`.
 
 ## Install manually
 
