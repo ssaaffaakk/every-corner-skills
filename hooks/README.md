@@ -11,7 +11,7 @@
 
 Only levels 3 and 4 interrupt you, because warnings shown on every command stop being read. The hook never blocks anything by itself. The skills work without it.
 
-**No extra tools needed.** The hook reads the command with `jq` if it is installed, otherwise with a built-in fallback (`sed` and `awk`), so it never switches itself off for lack of a tool. It runs no Python and nothing from your project folder. It adds roughly 10-30 ms to a normal command and stays well under a second even for a 300 KB command, far below its 10-second timeout.
+**No extra tools needed.** The hook reads the command with `jq` if it is installed, otherwise with a built-in `sed` fallback, so it never switches itself off for lack of a tool. It runs no Python and nothing from your project folder. It adds roughly 10-40 ms to a normal command and stays under a second even for a 300 KB command on macOS and Linux, far below its 10-second timeout.
 
 **Installed the plugin?** You already have the hook, switched on. Turn it off with `/plugin configure every-corner@every-corner-skills`. The steps below are only for manual installs.
 

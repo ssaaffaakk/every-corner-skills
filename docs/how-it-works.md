@@ -120,7 +120,7 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 - No published study yet ties these techniques to one-shot build success with real developers. The evidence comes from benchmarks with simulated users, survey research and security-warning studies.
 - The room-size boundaries and screen batching are judgment calls, to be tuned with real use.
 - A tour is a verified map, not a full audit; the ledger tells you what was only outlined or skipped.
-- **"Read only" is an instruction, not a lock.** A skill cannot take tools away for a whole conversation: Claude Code's `allowed-tools` only pre-approves tools, and `disallowed-tools` clears when you send your next message. The tour is told not to edit code or run anything but read-only commands. For a hard guarantee, run it in plan mode, which does not let Claude edit files (the tour then stays in chat instead of being saved), or deny `Edit` and `Write` in your permission settings.
+- **"Read only" is an instruction, not a lock.** A skill cannot take tools away for a whole conversation: Claude Code's `allowed-tools` only pre-approves tools, and `disallowed-tools` clears when you send your next message. The tour is told not to edit code or run anything but read-only commands. For a hard guarantee, run it in plan mode, which does not let Claude change files (the tour then stays in chat instead of being saved). Denying only `Edit` and `Write` is not enough: shell commands can still write files.
 - Explanations come from the same model that proposed the action.
 
 ## Repo layout
