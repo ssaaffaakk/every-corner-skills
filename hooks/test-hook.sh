@@ -6,7 +6,7 @@
 # hook is proven to work without jq too. Parsers missing on this machine are skipped.
 
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 
 fail=0
 total=0
