@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Run hook tests (jq, python3 and no-parser fallback)
+      - name: Run hook tests (with jq and with the no-jq fallback)
         run: |
           chmod +x hooks/explain-risky-commands.sh hooks/test-hook.sh
           ./hooks/test-hook.sh

@@ -113,11 +113,7 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 
 ## The hook
 
-[`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) (51 cases, each run three ways: with `jq`, with `python3`, and with neither) and CI on Linux and macOS.
-
-It needs no extra tools: it reads the command with `jq` if installed, otherwise `python3`, otherwise a plain-text fallback. In a headless `claude -p` run nobody can answer its prompt, so Claude Code denies the risky command; switch the hook off for unattended runs if that matters.
-
-> **A safety net, not a security boundary.** Pattern matching is easy to evade. For a stronger guard, combine it with a dedicated tool such as dcg or cc-safety-net, and use Claude Code's permission rules.
+[`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It splits a command into its parts (at `;`, `&&`, `|`), looks at each part's actual command word, and ignores text inside heredocs and commit messages. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) and CI on Linux and macOS. Setup, the off switch, headless behavior and the full list of patterns are in the [hook guide](../hooks/README.md).
 
 ## Honest limits
 

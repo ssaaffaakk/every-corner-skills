@@ -44,8 +44,10 @@ Each skill is a single `SKILL.md` file in `skills/<name>/`. When you change one:
 If you change a skill's `description`, also run the trigger tests locally (they use your own Claude account, so they don't run in CI):
 
 ```bash
-claude plugin eval . --runs 1
+claude plugin eval . --runs 1 --ablation none
 ```
+
+Keep `--ablation none`: in the default two-arm run, the "should trigger" graders (`tool_used: Skill`) are reported only as indicators and don't count toward the score, so a triggering regression would not fail the run.
 
 ## Releases (maintainers)
 

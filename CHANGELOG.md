@@ -8,7 +8,8 @@ Fixes from community reports #17-#23 and the hook gaps reported in #2, each veri
 
 ### Fixed
 - **Hook gaps (#2):** `rm -Rf`, `rm -R`, `rm -r`, `rm --recursive --force`, `/bin/rm -rf` and `xargs rm -rf` are now caught, and so is a force push written as `git push origin +main`. `git rm -rf` dropped from "cannot be undone" to "hard to undo", because git can restore committed files.
-- **The hook no longer switches itself off without `jq` (#17).** It reads the command with `jq`, else `python3`, else a plain-text fallback, and writes its output without `jq`. Every test runs under all three.
+- **More hook gaps found in code review:** force pushes with combined flags (`-uf`, `-fu`), quoted arguments (`"+main"`, `"-rf"`), backslash line continuations, git global options (`git -C dir push --force`), and deleting a remote branch (`git push origin :old`, `--delete`) are now caught; `git rm --cached` is no longer flagged. A dangerous command followed by a very long body (over 64 KB) used to slip through; it no longer does.
+- **The hook no longer switches itself off without `jq` (#17).** It reads the command with `jq`, or without it a built-in plain-text fallback, and writes its output without `jq`. Every test runs under both.
 - **Plugin version in one place (#19).** The marketplace entry no longer repeats `version`, `description`, `author` or `homepage`; `plugin.json` is the single source.
 - **No `<feature>` in the interview description (#20)**, which Claude Code displayed as `&lt;feature&gt;`.
 - **Stale docs (#23):** the repo layout, the "Decisions made for you" name, and the explain skill calling the hook optional.
@@ -16,7 +17,9 @@ Fixes from community reports #17-#23 and the hook gaps reported in #2, each veri
 ### Changed
 - **The tour is told not to run anything (#18):** no tests, builds, scripts or servers, only read-only commands. Docs say plainly that "read only" is an instruction, not a lock, and how to get a hard guarantee.
 - **Shorter skills (#22):** the reasoning sections moved out of the tour and interview skills; it already lives in `docs/`. The templates stay inside the skills: moving them to separate files made Claude ask permission to read the skill's own folder (and fail in headless runs), which was tested and reverted.
-- **Hook uses exec form (#23)** (`"command": "bash"`, `"args": [...]`), as the hooks docs recommend for path placeholders. Headless behavior is documented: in `claude -p` the hook's prompt can't be answered, so risky commands are denied.
+- **The hook checks each part of a command (#2, #23, review findings).** It splits at `;`, `&&`, `||`, `|` and `&`, looks through `sudo`, `env`, `xargs` and git's global options, and ignores heredoc bodies and commit messages. This fixes `git rm --cached a; git rm -f b` and `npm publish --dry-run && npm publish` slipping through, catches `git clean -d -f`, `git clean --force` and `git branch --delete --force`, and stops false alarms such as `echo "rm -rf"`. Matching now happens inside bash, so the hook takes about 10 ms per command instead of about 44 ms.
+- **No more Python in the hook.** A `python3` fallback was tried in review and removed: it would import a `json.py` planted in the project folder and run it on every command.
+- **Hook command stays in shell form.** The exec form suggested in #23 (`"command": "bash"` plus `"args"`) was not adopted: on a Claude Code version that predates `args`, bash would read the hook's JSON input as a script. The quoted shell form is safe on every version. Headless behavior is documented: in `claude -p` the hook's prompt can't be answered, so risky commands are denied.
 - **Plugin icon added (#23)**, so `claude plugin validate` reports nothing.
 
 ### Added

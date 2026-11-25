@@ -7,7 +7,7 @@ description: Use when someone is new to an existing project, returns to one afte
 
 Someone just walked into a house that is already built. Show them around the way a friend who knows it well would: what each room is for, how people move through it, where the odd creaky stairs are, and where to find things when they need them. Not a file listing, not a README summary.
 
-**Read only.** You do not change any project code in this skill; the only files you write are the tour. Do not run the project's tests, builds, scripts or servers either: read the commands from the project's docs and config and list them in the tour. Only read-only shell commands (`git log`, `git ls-files`, `git blame`, `ls`, `grep`, `find`, `wc`) are allowed.
+**Read only.** You do not change any project code in this skill; the only files you write are the tour. Do not run the project's tests, builds, scripts or servers either: read the commands from the project's docs and config and list them in the tour. Only read-only shell commands are allowed, such as `git log`, `git ls-files`, `git blame`, `git diff`, `git show`, `ls`, `grep`, `wc`, and `find` without `-delete`, `-exec` or `-execdir`.
 
 ## Parameters
 
