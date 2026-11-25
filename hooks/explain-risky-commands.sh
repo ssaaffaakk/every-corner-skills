@@ -36,15 +36,16 @@ esac
 
 input="$(cat)"
 
-# Read .tool_input.command with jq, or, without jq, a sed + awk fallback that
-# undoes the JSON escapes (\\ \" \n \t \r). (No python3: it would import modules
-# from the project folder.) EVERY_CORNER_HOOK_PARSER=raw forces the fallback for
-# the tests; any other value is ignored.
+# Read .tool_input.command with jq, or, without jq, a sed fallback that undoes
+# the JSON escapes (\\ \" \n \t \r) in linear time. (No python3: it would import
+# modules from the project folder.) EVERY_CORNER_HOOK_PARSER=raw forces the
+# fallback for the tests; any other value is ignored.
+nl=$'\n'
 raw_parse() {
   printf '%s' "$input" | tr '\n' ' ' \
     | sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' \
-    | awk '{ gsub(/\\\\/, "@@EC_BS@@"); gsub(/\\"/, "\""); gsub(/\\n/, "\n");
-             gsub(/\\[tr]/, " "); gsub(/@@EC_BS@@/, "\\"); printf "%s", $0 }'
+    | sed -e 's/\\\\/@@EC_BS@@/g' -e 's/\\"/"/g' -e 's/\\[tr]/ /g' \
+          -e "s/\\\\n/\\${nl}/g" -e 's/@@EC_BS@@/\\/g'
 }
 cmd=""
 if [ "${EVERY_CORNER_HOOK_PARSER:-auto}" != "raw" ] && command -v jq >/dev/null 2>&1; then
@@ -67,14 +68,18 @@ shopt -u nocasematch
 #  awk: join backslash-newline continuations.
 #  sed: remove quotes; drop git's global options at the start of a word
 #       (`git -C dir push` -> `git push`); mark `git rm` and `npm rm` so the
-#       plain-rm rule does not see them.
+#       plain-rm rule does not see them, but only where git/npm is the command
+#       word (so `sudo -u git rm -rf` stays a plain rm).
 W='(^|[^[:alnum:]_./-])'   # start of a word (not inside a path or `.git`)
+C='(^|[;&|(`{][[:blank:]]*|[[:blank:]](sudo|env|command|exec|time|nohup|then|do|else|xargs)[[:blank:]]+)'   # git/npm as the command word
+
 text="$(printf '%s\n' "$cmd" \
+  | tr '\r' ' ' \
   | awk '{ if (sub(/\\$/, "")) printf "%s ", $0; else print }' \
   | sed -E \
       -e "s/[\"']//g" \
-      -e "s#${W}git(([[:blank:]]+(-C|-c|--git-dir|--work-tree|--namespace)[[:blank:]]+[^[:blank:]]+|[[:blank:]]+--?[a-zA-Z][a-zA-Z-]*(=[^[:blank:]]+)?)+)([[:blank:]]+[a-z])#\\1git\\6#g" \
-      -e "s#${W}git([[:blank:]]+)rm([[:blank:];&|)<>]|\$)#\\1git_rm\\3#g" \
+      -e "s#${W}git(([[:blank:]]+(-C|-c|--git-dir|--work-tree|--namespace)[[:blank:]]+[^[:blank:];&|<>]+|[[:blank:]]+--?[a-zA-Z][a-zA-Z-]*(=[^[:blank:];&|<>]+)?)+)([[:blank:]]+[a-z])#\\1git\\6#g" \
+      -e "s#${C}git([[:blank:]]+)rm([[:blank:];&|)<>]|\$)#\\1git_rm\\4#g" \
       -e "s#${W}(npm|pnpm|yarn)([[:blank:]]+)rm([[:blank:];&|)<>]|\$)#\\1\\2_rm\\4#g")" || text="$cmd"
 
 # One command segment per line, for the rules that have an exception.
@@ -109,6 +114,9 @@ seg_has() {
 }
 short() { printf '%s' "[[:blank:]]-[a-zA-Z]*$1[a-zA-Z]*([[:blank:]]|\$)"; }
 long()  { printf '%s' "[[:blank:]]--$1(=|[[:blank:]]|\$)"; }
+# A flag that appears AFTER the command word $1 (so `xargs -n 1 git clean -fd`
+# does not count the -n of xargs).
+after() { printf '%s' "$1([[:blank:]]+[^#[:blank:]][^[:blank:]]*)*($2)"; }   # stops at a # comment
 
 # Level 4: cannot be undone
 if has "${B}rm${A}(-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)${E}"; then
@@ -131,8 +139,10 @@ if has "${B}git${A}(checkout|restore)([[:blank:]]+--)?[[:blank:]]+\\.${E}"; then
   raise 4 "Discards every uncommitted change in this folder." \
           "git stash (keeps the changes so you can get them back)."
 fi
-if has "${B}git${A}clean${E}" \
-   && seg_has "${B}git${A}clean([[:blank:]]|\$)" "$(short f)|$(long force)" "$(short n)|$(long dry-run)"; then
+GCLEAN="${B}git${A}clean"
+if has "${GCLEAN}${E}" \
+   && seg_has "${GCLEAN}([[:blank:]]|\$)" "$(after "$GCLEAN" "$(short f)|$(long force)")" \
+              "$(after "$GCLEAN" "$(short n)|$(long dry-run)")"; then
   raise 4 "Deletes files git is not tracking. They are in no commit, so they cannot be recovered." \
           "git clean -nd first (shows what would be deleted, deletes nothing)."
 fi
@@ -140,13 +150,15 @@ if [ "$sql" = 1 ]; then
   raise 4 "Permanently removes a database table or all of its data." \
           "Take a backup or export first, and make sure this is not the production database."
 fi
-if has "(curl|wget)[^|]*\\|[[:blank:]]*(sudo[[:blank:]]+)?(ba|z|da)?sh${E}"; then
+if has "(curl|wget)[^|]*\\|[[:blank:]]*(sudo([[:blank:]]+-[^[:blank:]]+)*[[:blank:]]+)?(ba|z|da)?sh${E}" \
+   || has "${B}(ba|z|da)?sh[[:blank:]]+[<]?[[:blank:]]*[(\$]*[[:blank:]]*(curl|wget)${E}"; then
   raise 4 "Downloads a script from the internet and runs it immediately, without you seeing what it does." \
           "Download the script, read it, then run it."
 fi
+PUB="${B}(npm|pnpm|yarn|cargo|twine)"
 if has "(publish|upload)${E}" \
    && seg_has "${B}((npm|pnpm|yarn|cargo)([[:blank:]]+[^[:blank:]]+)*[[:blank:]]+publish|twine[[:blank:]]+upload)([[:blank:]]|\$)" \
-              "." "$(long dry-run)|$(long help)|$(short h)"; then
+              "." "$(after "$PUB" "$(long dry-run)|$(long help)|$(short h)")"; then
   raise 4 "Publishes this package publicly. A published version cannot be taken back." \
           "Run a dry run first (for npm: npm publish --dry-run)."
 fi
@@ -165,21 +177,23 @@ fi
 
 # Level 3: hard to undo
 if has "${B}git_rm${E}" \
-   && seg_has "${B}git_rm([[:blank:]]|\$)" "$(short f)|$(long force)" "$(long cached)"; then
+   && seg_has "${B}git_rm([[:blank:]]|\$)" "$(after "${B}git_rm" "$(short f)|$(long force)")" \
+              "$(after "${B}git_rm" "$(long cached)")"; then
   raise 3 "Removes files from git and from disk, even if they have changes you haven't committed. The last committed version can be restored; uncommitted edits in them are lost." \
           "Commit or stash first, or use git rm --cached to keep the files on disk."
 fi
-if has "${B}git${A}branch${E}" \
-   && { seg_has "${B}git${A}branch([[:blank:]]|\$)" "$(short D)" \
-        || { seg_has "${B}git${A}branch([[:blank:]]|\$)" "$(short d)|$(long delete)" \
-             && seg_has "${B}git${A}branch([[:blank:]]|\$)" "$(short f)|$(long force)"; }; }; then
+GBRANCH="${B}git${A}branch"
+if has "${GBRANCH}${E}" \
+   && { seg_has "${GBRANCH}([[:blank:]]|\$)" "$(after "$GBRANCH" "$(short D)")" \
+        || { seg_has "${GBRANCH}([[:blank:]]|\$)" "$(after "$GBRANCH" "$(short d)|$(long delete)")" \
+             && seg_has "${GBRANCH}([[:blank:]]|\$)" "$(after "$GBRANCH" "$(short f)|$(long force)")"; }; }; then
   raise 3 "Deletes a branch even if its work was never merged. Recovery needs git reflog." \
           "git branch -d (refuses if the work isn't merged)."
 fi
 if has "${B}(sudo|doas)${E}"; then
   raise 3 "Runs with administrator rights. It can change anything on this computer, not just this project."
 fi
-if has "${B}chmod${A}0?777${E}"; then
+if has "${B}chmod${A}[0-7]?777${E}"; then
   raise 3 "Lets every user on this computer read, change and run these files." \
           "Use a narrower permission, such as chmod 755 or chmod +x."
 fi

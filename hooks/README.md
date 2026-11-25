@@ -62,7 +62,7 @@ This runs every example command twice (with `jq` and with the no-`jq` fallback) 
 
 ## Add a new pattern
 
-1. In `explain-risky-commands.sh`, add a check in the right section (level 4 or level 3): `if has "<regex>"; then raise 4 "<what it does>" "<safer option>"; fi`. Build the regex from `B` (start of a command word), `A` (other arguments) and `E` (end of a word), like the rules around it. If the rule needs an exception that must sit in the same command segment (like `--cached` or `--dry-run`), use `each_segment` with a small check function instead. Write the warning in plain English and say what is lost.
+1. In `explain-risky-commands.sh`, add a check in the right section (level 4 or level 3): `if has "<regex>"; then raise 4 "<what it does>" "<safer option>"; fi`. Build the regex from `B` (start of a command word), `A` (other arguments) and `E` (end of a word), like the rules around it. If the rule needs an exception that must sit in the same command segment (like `--cached` or `--dry-run`), use `seg_has <match> <must-match> <must-not-match>` (three regexes, checked one command segment at a time), and build the exception with `after <command> <flags>` so it only counts flags that follow that command. Write the warning in plain English and say what is lost.
 2. Add one dangerous example and one similar-looking safe example to `test-hook.sh`.
 3. Run `./hooks/test-hook.sh` and open a pull request.
 
