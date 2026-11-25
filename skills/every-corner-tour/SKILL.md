@@ -7,13 +7,7 @@ description: Use when someone is new to an existing project, returns to one afte
 
 Someone just walked into a house that is already built. Show them around the way a friend who knows it well would: what each room is for, how people move through it, where the odd creaky stairs are, and where to find things when they need them. Not a file listing, not a README summary.
 
-You do not change any project code in this skill. The only file you write is the tour.
-
-## Why it works this way (briefly)
-
-- Auto-generated wikis (DeepWiki and others) are reported to make confident mistakes and to skip folders without saying so. This skill **verifies every reference** and **accounts for every folder** in a coverage ledger, so "every corner" is something the reader can check rather than a promise.
-- Reading every line of a large repo is not affordable and does not help understanding. Reading in **tiers** (list everything, outline everything, read the core fully) covers every corner at a fraction of the cost.
-- Beginners learn faster from one concrete flow told as a story, concepts ordered basic to advanced, and analogies (PocketFlow tutorials, CodeTour practice) than from a component list.
+**Read only.** You do not change any project code in this skill; the only files you write are the tour. Do not run the project's tests, builds, scripts or servers either: read the commands from the project's docs and config and list them in the tour. Only read-only shell commands (`git log`, `git ls-files`, `git blame`, `ls`, `grep`, `find`, `wc`) are allowed.
 
 ## Parameters
 
@@ -108,7 +102,7 @@ End with a one-line summary of the loop, e.g. "door -> receptionist -> desk -> d
 - **<term>:** <meaning in this project>
 
 ## How to run it and check it works
-<Exact commands, and what you should see.>
+<Exact commands, and what you should see. Taken from the project's own docs and config; the tour lists them, it does not run them.>
 
 ## Things that will surprise you
 - <Quirk, with file:line and why, from git history if known.>
@@ -152,3 +146,4 @@ In chat, give a short friendly summary (the one-sentence description, the story'
 - Guessed line numbers or file paths, or paths shortened with `...`.
 - Five diagrams. Walls of jargon. Explaining *what* without *why*.
 - Editing project files during a tour (only `tour_file` and its chapters are written).
+- Running the project's tests, builds, scripts or servers. List the commands; do not run them.

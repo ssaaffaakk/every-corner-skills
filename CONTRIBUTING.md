@@ -39,7 +39,17 @@ Each skill is a single `SKILL.md` file in `skills/<name>/`. When you change one:
 1. Fork the repo and create a branch from `main`.
 2. Make a focused change. One idea per pull request.
 3. Fill in the pull request template.
-4. CI runs the hook tests. Please make sure they pass.
+4. CI runs the hook tests on Linux and macOS, ShellCheck, and `claude plugin validate --strict`. Please make sure they pass.
+
+If you change a skill's `description`, also run the trigger tests locally (they use your own Claude account, so they don't run in CI):
+
+```bash
+claude plugin eval . --runs 1
+```
+
+## Releases (maintainers)
+
+The version lives only in `.claude-plugin/plugin.json`. Bump it there, add a `CHANGELOG.md` entry, and tag the release. Do not add a `version` to the marketplace entry: when both are set, `plugin.json` wins and the two drift apart.
 
 ## Reporting problems
 

@@ -2,6 +2,27 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
+## 1.0.5 (2026-11-25)
+
+Fixes from community reports #17-#23 and the hook gaps reported in #2, each verified against the code, the validator and the official docs before fixing.
+
+### Fixed
+- **Hook gaps (#2):** `rm -Rf`, `rm -R`, `rm -r`, `rm --recursive --force`, `/bin/rm -rf` and `xargs rm -rf` are now caught, and so is a force push written as `git push origin +main`. `git rm -rf` dropped from "cannot be undone" to "hard to undo", because git can restore committed files.
+- **The hook no longer switches itself off without `jq` (#17).** It reads the command with `jq`, else `python3`, else a plain-text fallback, and writes its output without `jq`. Every test runs under all three.
+- **Plugin version in one place (#19).** The marketplace entry no longer repeats `version`, `description`, `author` or `homepage`; `plugin.json` is the single source.
+- **No `<feature>` in the interview description (#20)**, which Claude Code displayed as `&lt;feature&gt;`.
+- **Stale docs (#23):** the repo layout, the "Decisions made for you" name, and the explain skill calling the hook optional.
+
+### Changed
+- **The tour is told not to run anything (#18):** no tests, builds, scripts or servers, only read-only commands. Docs say plainly that "read only" is an instruction, not a lock, and how to get a hard guarantee.
+- **Shorter skills (#22):** the reasoning sections moved out of the tour and interview skills; it already lives in `docs/`. The templates stay inside the skills: moving them to separate files made Claude ask permission to read the skill's own folder (and fail in headless runs), which was tested and reverted.
+- **Hook uses exec form (#23)** (`"command": "bash"`, `"args": [...]`), as the hooks docs recommend for path placeholders. Headless behavior is documented: in `claude -p` the hook's prompt can't be answered, so risky commands are denied.
+- **Plugin icon added (#23)**, so `claude plugin validate` reports nothing.
+
+### Added
+- **Skill trigger tests (#21):** `evals/` holds six `claude plugin eval` cases, four that must load the interview and two that must not. All six pass. They use your own Claude account, so they run locally, not in CI.
+- **CI (#21):** hook tests on Linux and macOS, ShellCheck, and `claude plugin validate --strict`.
+
 ## 1.0.4 (2026-11-21)
 
 Result of round 2 of the [stress test](docs/stress-test.md): the scenarios round 1 could not run (a contradicting user, "you decide", "build now", a new project, a prompt-injection note in code), driven as real sessions on fresh clones.

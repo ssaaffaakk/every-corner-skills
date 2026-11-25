@@ -1,13 +1,11 @@
 ---
 name: every-corner-interview
-description: MUST be used FIRST, before writing any code or loading any build, design or publish skill, whenever the user asks to build, add, create, make, change, redesign or improve something that has more than one reasonable reading - a new feature, a new app or project, or a vague request like "make the dashboard better". Reads the project, asks only the questions that change the build, writes a spec to docs/every-corner/specs/<feature>.md, confirms it, then builds. Skip only when one obvious change exists (a typo, a rename, a one-line fix).
+description: MUST be used FIRST, before writing any code or loading any build, design or publish skill, whenever the user asks to build, add, create, make, change, redesign or improve something that has more than one reasonable reading - a new feature, a new app or project, or a vague request like "make the dashboard better". Reads the project, asks only the questions that change the build, writes a spec under docs/every-corner/specs/, confirms it, then builds. Skip only when one obvious change exists (a typo, a rename, a one-line fix).
 ---
 
 # Every Corner: Interview
 
 The user's request is **the room**. The first sentence only tells you a room exists, not how big it is, what goes inside, or how it should behave. Builds fail when you fill those gaps with guesses. Find every gap that matters, close it with the user, write it down, then build the room right the first time. This is how an excellent senior developer starts a feature: read first, ask sharp questions, agree on what "done" means, then build without surprises.
-
-Why this works, with the studies behind it: [research report](https://github.com/ssaaffaakk/every-corner-skills/blob/main/docs/research.md). In short: models under-ask by default, the *value* of a question matters more than the count, and strong agents read the code first.
 
 ## Hard rules
 
@@ -63,7 +61,7 @@ Everything the code answers becomes a **Discovered** row, not a question.
 
 ## Step 3: Draft the spec before asking
 
-Create `spec_dir/<feature-slug>.md` from the template below with `Status: Draft`. Fill it with what you discovered and your best guesses, and mark every row of the coverage ledger:
+Create `spec_dir/<feature-slug>.md` from the template at the end of this file with `Status: Draft`. Fill it with what you discovered and your best guesses, and mark every row of the coverage ledger:
 
 - **Discovered:** the code answers it (cite `file:line` with the full path from the project root, never shortened with `...`).
 - **Defaulted:** a sensible choice the user is unlikely to care about (write the reason).

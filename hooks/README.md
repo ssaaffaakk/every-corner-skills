@@ -5,15 +5,17 @@
 | Level | Examples | What happens |
 |---|---|---|
 | 1. Read-only | `ls`, `git status` | Passes silently |
-| 2. Easy to undo | `git push`, `npm test`, `rm file.txt` | Passes silently |
-| 3. Hard to undo | `sudo`, `chmod 777`, `git branch -D`, `--no-verify` | Asks you, with a `⚠️ HARD TO UNDO` warning |
-| 4. Cannot be undone | `rm -rf`, `git push --force`, `git reset --hard`, `DROP TABLE`, `npm publish`, `curl \| sh` | Asks you, with a `⛔ CANNOT BE UNDONE` warning and a safer option |
+| 2. Easy to undo | `git push`, `npm test`, `rm file.txt`, `git rm file.txt` | Passes silently |
+| 3. Hard to undo | `sudo`, `chmod 777`, `git branch -D`, `git rm -f`, `--no-verify` | Asks you, with a `⚠️ HARD TO UNDO` warning |
+| 4. Cannot be undone | `rm -r` / `rm -rf` / `rm --recursive`, `git push --force` / `git push origin +main`, `git reset --hard`, `DROP TABLE`, `npm publish`, `curl \| sh` | Asks you, with a `⛔ CANNOT BE UNDONE` warning and a safer option |
 
-Only levels 3 and 4 interrupt you, because warnings shown on every command stop being read. The hook never blocks anything by itself. It is optional: the skills work without it.
+Only levels 3 and 4 interrupt you, because warnings shown on every command stop being read. The hook never blocks anything by itself. The skills work without it.
 
-**You need:** `jq` (`brew install jq` on macOS, `sudo apt install jq` on Linux).
+**No extra tools needed.** The hook reads the command with `jq` if it is installed, otherwise `python3`, otherwise a plain-text fallback, so it never switches itself off silently.
 
 **Installed the plugin?** You already have the hook, switched on. Turn it off with `/plugin configure every-corner@every-corner-skills`. The steps below are only for manual installs.
+
+**Headless runs (`claude -p`, CI):** nobody can answer the hook's prompt there, so Claude Code **denies** the risky command instead of asking. If an unattended job legitimately needs `rm -rf` or `npm publish`, turn the hook off for that run.
 
 ## Install manually
 
@@ -52,7 +54,7 @@ If you already have a `hooks` section, add this entry to it instead of replacing
 ./hooks/test-hook.sh
 ```
 
-This runs 34 example commands and checks that each lands at the right level.
+This runs 51 example commands, each three ways (with `jq`, with `python3`, and with neither), and checks that each lands at the right level.
 
 ## Add a new pattern
 

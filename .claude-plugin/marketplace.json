@@ -9,14 +9,8 @@
   "plugins": [
     {
       "name": "every-corner",
-      "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, and explains every risky command before you click Accept.",
-      "version": "1.0.4",
-      "author": {
-        "name": "ssaaffaakk"
-      },
-      "category": "development",
       "source": "./",
-      "homepage": "https://github.com/ssaaffaakk/every-corner-skills"
+      "category": "development"
     }
   ]
 }

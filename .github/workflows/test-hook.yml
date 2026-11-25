@@ -1,4 +1,4 @@
-name: Test hook
+name: CI
 
 on:
   push:
@@ -7,10 +7,36 @@ on:
 
 jobs:
   test-hook:
-    runs-on: ubuntu-latest
+    name: Hook tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Run hook tests
+      - name: Run hook tests (jq, python3 and no-parser fallback)
         run: |
           chmod +x hooks/explain-risky-commands.sh hooks/test-hook.sh
           ./hooks/test-hook.sh
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ShellCheck the hook and its tests
+        run: shellcheck -S warning hooks/*.sh
+
+  validate:
+    name: Plugin validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2.1.332
+      - name: Validate plugin, marketplace and skills (strict)
+        run: claude plugin validate --strict .

@@ -11,6 +11,8 @@
 # every command stop being read.
 #
 # This is a safety net, not a security boundary: pattern matching can be evaded.
+# In a headless `claude -p` run nobody can answer the "ask", so Claude Code
+# denies the command; switch the hook off for unattended runs if that matters.
 
 set -euo pipefail
 
@@ -20,11 +22,32 @@ case "${CLAUDE_PLUGIN_OPTION_SAFETYNET:-true}" in
   false|False|FALSE|0|no|off) exit 0 ;;
 esac
 
-# Without jq we cannot read the command; stay out of the way rather than error.
-command -v jq >/dev/null 2>&1 || exit 0
-
 input="$(cat)"
-cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty')"
+
+# Read .tool_input.command with jq, or python3, or (with neither) fall back to
+# the raw JSON: the patterns below only need to appear somewhere in the input.
+# EVERY_CORNER_HOOK_PARSER forces one parser; the tests use it.
+parser="${EVERY_CORNER_HOOK_PARSER:-auto}"
+if [ "$parser" = "auto" ]; then
+  if command -v jq >/dev/null 2>&1; then parser=jq
+  elif command -v python3 >/dev/null 2>&1; then parser=python3
+  else parser=raw
+  fi
+fi
+case "$parser" in
+  jq)      cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // empty')" ;;
+  python3) cmd="$(printf '%s' "$input" | python3 -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("tool_input", {}).get("command", "") or "")
+except Exception:
+    pass')" ;;
+  *)       # No JSON parser: pull the "command" string out with sed and unescape
+           # \" and \\. If that fails, scan the raw input as a last resort.
+           cmd="$(printf '%s' "$input" | tr '\n' ' ' \
+             | sed -nE 's/.*"command"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' \
+             | sed -e 's/\\"/"/g' -e 's/\\\\/\\/g')"
+           [ -z "$cmd" ] && cmd="$input" ;;
+esac
 
 [ -z "$cmd" ] && exit 0
 
@@ -39,11 +62,21 @@ matchi() { printf '%s' "$cmd" | grep -Eiq -- "$1"; }
 hard()   { level=3; what="$1"; safer="${2:-}"; }
 cannot() { level=4; what="$1"; safer="${2:-}"; }
 
+# A plain `rm` that deletes recursively: -r, -R, -rf, -Rf, -fr, --recursive, in
+# any order. `git rm` is excluded here (git can restore tracked files) and is
+# handled at level 3 below.
+recursive_rm() {
+  printf '%s' "$cmd" \
+    | sed -E 's/git[[:space:]]+rm([[:space:]]|$)/git_rm\1/g' \
+    | grep -oE '(^|[^[:alnum:]_.-])rm[[:space:]][^;&|]*' \
+    | grep -Eq -- '[[:space:]](-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)([[:space:]]|$)'
+}
+
 # Level 4: cannot be undone
-if match 'rm[[:space:]]+(-[a-z]*r[a-z]*f|-[a-z]*f[a-z]*r|-r[[:space:]]+-f|-f[[:space:]]+-r)'; then
-  cannot "Deletes files and folders permanently. They do not go to the trash." \
+if recursive_rm; then
+  cannot "Deletes folders and everything in them permanently. They do not go to the trash." \
          "List what would be deleted first, or move it to the trash."
-elif match 'git[[:space:]]+push.*(--force([[:space:]]|$)|[[:space:]]-f([[:space:]]|$))'; then
+elif match 'git[[:space:]]+push[^;&|]*([[:space:]]--force([[:space:]]|$)|[[:space:]]-f([[:space:]]|$)|[[:space:]]\+[^[:space:];&|])'; then
   cannot "Replaces the branch on the server with your local copy. Commits that exist only on the server are lost." \
          "git push --force-with-lease (refuses to overwrite work you haven't seen)."
 elif match 'git[[:space:]]+reset[[:space:]]+.*--hard|git[[:space:]]+reset[[:space:]]+--hard'; then
@@ -76,6 +109,9 @@ elif match 'kubectl[[:space:]]+delete'; then
          "Check the current context (kubectl config current-context) and try --dry-run=client first."
 
 # Level 3: hard to undo
+elif match 'git[[:space:]]+rm([[:space:]][^;&|]*)?[[:space:]](-[a-zA-Z]*f[a-zA-Z]*|--force)([[:space:]]|$)'; then
+  hard "Removes files from git and from disk, even if they have changes you haven't committed. The last committed version can be restored; uncommitted edits in them are lost." \
+       "Commit or stash first, or use git rm --cached to keep the files on disk."
 elif match '(^|[[:space:];&|])sudo[[:space:]]'; then
   hard "Runs with administrator rights. It can change anything on this computer, not just this project."
 elif match 'chmod[[:space:]]+(-R[[:space:]]+)?0?777'; then
@@ -98,10 +134,6 @@ else
 fi
 [ -n "$safer" ] && reason="$reason Safer option: $safer"
 
-jq -n --arg r "$reason" '{
-  hookSpecificOutput: {
-    hookEventName: "PreToolUse",
-    permissionDecision: "ask",
-    permissionDecisionReason: $r
-  }
-}'
+# Build the JSON by hand so the output never depends on jq.
+escaped="$(printf '%s' "$reason" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"%s"}}\n' "$escaped"
