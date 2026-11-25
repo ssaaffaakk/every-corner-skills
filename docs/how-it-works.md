@@ -82,7 +82,7 @@ A question is asked only when all four hold:
 3. It has not been asked already.
 4. The user can realistically answer it (no library choices for non-technical users).
 
-Anything else becomes a written default in the spec's Assumptions section.
+Anything else becomes a written default in the spec's "Decisions made for you" section.
 
 ### The room checklist
 
@@ -113,35 +113,44 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 
 ## The hook
 
-[`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) (34 cases) and CI.
-
-> **A safety net, not a security boundary.** Pattern matching is easy to evade. For a stronger guard, combine it with a dedicated tool such as dcg or cc-safety-net, and use Claude Code's permission rules.
+[`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It searches the whole command text, heredocs included, so a dangerous command is found wherever it sits, and it errs toward an extra warning rather than a miss. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) and CI on Linux and macOS. Setup, the off switch, headless behavior and the full list of patterns are in the [hook guide](../hooks/README.md).
 
 ## Honest limits
 
 - No published study yet ties these techniques to one-shot build success with real developers. The evidence comes from benchmarks with simulated users, survey research and security-warning studies.
 - The room-size boundaries and screen batching are judgment calls, to be tuned with real use.
 - A tour is a verified map, not a full audit; the ledger tells you what was only outlined or skipped.
+- **"Read only" is an instruction, not a lock.** A skill cannot take tools away for a whole conversation: Claude Code's `allowed-tools` only pre-approves tools, and `disallowed-tools` clears when you send your next message. The tour is told not to edit code or run anything but read-only commands. For a hard guarantee, run it in plan mode, which does not let Claude change files (the tour then stays in chat instead of being saved). Denying only `Edit` and `Write` is not enough: shell commands can still write files.
 - Explanations come from the same model that proposed the action.
 
 ## Repo layout
 
 ```
 every-corner-skills/
+├── .claude-plugin/
+│   ├── plugin.json         (the plugin: name, version, options)
+│   └── marketplace.json    (this repo as a plugin marketplace)
 ├── skills/
 │   ├── every-corner-tour/SKILL.md
 │   ├── every-corner-interview/SKILL.md
 │   └── every-corner-explain/SKILL.md
 ├── hooks/
+│   ├── hooks.json          (registers the hook for plugin users)
 │   ├── explain-risky-commands.sh
 │   ├── test-hook.sh
 │   └── README.md
+├── evals/                  (skill trigger tests for `claude plugin eval`)
 ├── examples/
 │   ├── tour-example.md
 │   ├── interview-example.md
 │   └── permission-explanations.md
-├── docs/how-it-works.md
-├── .github/               (issue and pull request templates, CI)
+├── docs/
+│   ├── how-it-works.md
+│   ├── research.md
+│   └── stress-test.md
+├── assets/                 (banner, icon, social preview)
+├── .github/                (issue and pull request templates, CI)
+├── CHANGELOG.md
 ├── CONTRIBUTING.md
 └── LICENSE
 ```
