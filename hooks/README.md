@@ -11,13 +11,15 @@
 
 Only levels 3 and 4 interrupt you, because warnings shown on every command stop being read. The hook never blocks anything by itself. The skills work without it.
 
-**No extra tools needed.** The hook reads the command with `jq` if it is installed, otherwise with a built-in plain-text fallback, so it never switches itself off silently. It runs no Python and nothing from your project folder, and adds about 10 ms to each command.
+**No extra tools needed.** The hook reads the command with `jq` if it is installed, otherwise with a built-in fallback (`sed` and `awk`), so it never switches itself off for lack of a tool. It runs no Python and nothing from your project folder, and adds roughly 10-20 ms to a normal command (about 0.1 s for a very large one).
 
 **Installed the plugin?** You already have the hook, switched on. Turn it off with `/plugin configure every-corner@every-corner-skills`. The steps below are only for manual installs.
 
 **Headless runs (`claude -p`, CI):** nobody can answer the hook's prompt there, so Claude Code **denies** the risky command instead of asking. If an unattended job legitimately needs `rm -rf` or `npm publish`, turn the hook off for that run.
 
-**Who can turn it off:** the off switch is the environment variable `CLAUDE_PLUGIN_OPTION_SAFETYNET`. Any settings file that sets environment variables for a session can set it, including a project's `.claude/settings.json`. If you open a project you don't trust, check its settings for that variable.
+**Who can turn it off:** the off switch is the environment variable `CLAUDE_PLUGIN_OPTION_SAFETYNET`. Any settings file that sets environment variables for a session can set it, including a project's `.claude/settings.json`. If you open a project you don't trust, check its settings for that variable. (`EVERY_CORNER_HOOK_PARSER` is for the tests only: `raw` forces the no-`jq` fallback, and any other value is ignored.)
+
+**What it errs toward:** it searches the whole command text, so a dangerous command is found wherever it sits (after `VAR=x`, inside `if`/`for`, `( )`, `$( )`, `bash -c`, `ssh host '...'`, or a heredoc fed to a shell). The price is the occasional extra warning when a command only *mentions* one, for example in an `echo` or a commit message. Heredoc text that `cat` or `tee` writes to a file is ignored.
 
 ## Install manually
 
@@ -60,7 +62,7 @@ This runs every example command twice (with `jq` and with the no-`jq` fallback) 
 
 ## Add a new pattern
 
-1. Add an `elif` branch to `explain-risky-commands.sh` in the right section. Use `cannot "<what it does>" "<safer option>"` for level 4 or `hard "<what it does>" "<safer option>"` for level 3. Write the warning in plain English and say what is lost.
+1. In `explain-risky-commands.sh`, add a check in the right section (level 4 or level 3): `if has "<regex>"; then raise 4 "<what it does>" "<safer option>"; fi`. Build the regex from `B` (start of a command word), `A` (other arguments) and `E` (end of a word), like the rules around it. If the rule needs an exception that must sit in the same command segment (like `--cached` or `--dry-run`), use `each_segment` with a small check function instead. Write the warning in plain English and say what is lost.
 2. Add one dangerous example and one similar-looking safe example to `test-hook.sh`.
 3. Run `./hooks/test-hook.sh` and open a pull request.
 

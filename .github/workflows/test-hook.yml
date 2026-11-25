@@ -16,6 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run hook tests (with jq and with the no-jq fallback)
+        env:
+          # On macOS, run the hook with the system bash 3.2, as users' Macs do.
+          HOOK_BASH: ${{ matrix.os == 'macos-latest' && '/bin/bash' || 'bash' }}
         run: |
           chmod +x hooks/explain-risky-commands.sh hooks/test-hook.sh
           ./hooks/test-hook.sh

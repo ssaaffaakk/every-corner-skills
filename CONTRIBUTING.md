@@ -22,7 +22,7 @@ These rules apply to the skills, the hook warnings and the docs:
 
 ## Adding a hook pattern
 
-1. Add a new `elif match '...'` branch to [`hooks/explain-risky-commands.sh`](hooks/explain-risky-commands.sh) with a plain-language `reason`.
+1. Add a check to [`hooks/explain-risky-commands.sh`](hooks/explain-risky-commands.sh): `if has "<regex>"; then raise 4 "<what it does>" "<safer option>"; fi` (or `raise 3` for hard to undo). [hooks/README.md](hooks/README.md#add-a-new-pattern) explains the regex building blocks.
 2. Add test cases to [`hooks/test-hook.sh`](hooks/test-hook.sh): at least one dangerous command that should be flagged, and one similar-looking safe command that should pass.
 3. Run `./hooks/test-hook.sh` and make sure everything passes.
 
