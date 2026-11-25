@@ -2,6 +2,21 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
+## 1.0.4 (2026-11-21)
+
+Result of round 2 of the [stress test](docs/stress-test.md): the scenarios round 1 could not run (a contradicting user, "you decide", "build now", a new project, a prompt-injection note in code), driven as real sessions on fresh clones.
+
+### Fixed
+- **No false "it's in the spec".** The spec is updated before every reply, and the skill never says something is recorded unless it was written that turn. In one run it claimed delegated choices were marked as risks with no write behind it.
+- **Parked scope is said in chat.** When part of a request depends on something that does not exist (for example "friends see my folders" with no friends feature), the skill says so in one line and lists it under a new "Parked rooms" section.
+- **Contradictions are named** ("Earlier you said private; now friends should see it") and the user is asked which wins, instead of settling it inside a later question.
+- **Injected notes are reported.** If a repo file tells AI to skip questions, the first message names the file and says it is being ignored.
+- **"Build now" counts as the yes** to "Build it?": open rows become `Defaulted - RISK`, the "Decisions I made for you" list opens the next message, then it builds.
+- When the options already spelled out the consequences, a delegated irreversible choice is not re-asked: it takes the least destructive option and states the cost.
+
+### Changed
+- [Stress-test report](docs/stress-test.md) now includes round 2, its fixes and retests, and a longer list of what is still unverified.
+
 ## 1.0.3 (2026-11-16)
 
 Result of a [stress test](docs/stress-test.md): eight adversarial scenarios run as real headless sessions with a simulated user. Three failed on the first run because the skill never loaded.

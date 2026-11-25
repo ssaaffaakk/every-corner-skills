@@ -1,6 +1,6 @@
 {
   "name": "every-corner",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, and explains every risky command before you click Accept.",
   "author": {
     "name": "ssaaffaakk",
