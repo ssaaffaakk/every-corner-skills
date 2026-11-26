@@ -46,6 +46,7 @@ IFS="$US" read -r tool session cwd file skill <<< "$fields"
 session="$(printf '%s' "$session" | tr -cd 'A-Za-z0-9_-')"   # names a file below: no ../
 [ -n "$session" ] || session="nosession"
 
+# (No session id at all shares one mark, "nosession": harmless, Claude Code always sends one.)
 # One empty file per session marks "already handled", in the plugin's data folder
 # when Claude Code provides one, otherwise in a folder only this user owns.
 guard="${CLAUDE_PLUGIN_DATA:-${TMPDIR:-/tmp}}/every-corner-style-guard"
@@ -65,11 +66,13 @@ fi
 
 # Cheap checks first: a source file, a session not handled yet, a working folder.
 # Keep the extensions in sync with LANGS in skills/every-corner-matchcodebase/scripts/style-counts.py.
+shopt -s nocasematch   # A.PY counts too (the script lower-cases extensions)
 case "${file##*.}" in
   py|js|jsx|mjs|cjs|ts|tsx|go|rs|java|kt|rb|php|c|h|cpp|cc|hpp|cs|swift|sh|scala|dart|lua) ;;
   *) exit 0 ;;
 esac
 case "$file" in /*) ;; *) exit 0 ;; esac   # Claude Code sends absolute paths
+case "$file" in */../*|*/..) exit 0 ;; esac   # not normalised: cannot tell where it points
 [ -e "$guard/$session" ] && exit 0
 [ -n "$cwd" ] && [ -d "$cwd" ] || exit 0
 
@@ -77,7 +80,8 @@ case "$file" in /*) ;; *) exit 0 ;; esac   # Claude Code sends absolute paths
 # that looks like a bare repository (HEAD, objects/, refs/, config) would otherwise
 # be opened by git's discovery and its core.fsmonitor command run. (Git older than
 # 2.38 ignores safe.bareRepository; core.fsmonitor=false still stops the command.)
-g() { git -c safe.bareRepository=explicit -c core.fsmonitor=false "$@"; }
+# core.quotePath=false: file names with non-ASCII characters come out as they are.
+g() { git -c safe.bareRepository=explicit -c core.fsmonitor=false -c core.quotePath=false "$@"; }
 
 # The project is the working folder's repository, or the working folder itself.
 # Real paths on both sides: git reports them with symlinks resolved (macOS /tmp is
@@ -93,21 +97,28 @@ while [ -n "$dir" ] && [ ! -d "$dir" ]; do dir="${dir%/*}"; done
 real_dir="$(cd "$dir" && pwd -P)" || exit 0
 file="$real_dir${file#"$dir"}"
 
+# Claude Code started in a folder that is not a repository itself (a parent holding
+# several projects): use the edited file's repository when it lies below that folder.
+if [ "$in_git" = 0 ]; then
+  sub="$(g -C "$real_dir" rev-parse --show-toplevel 2>/dev/null)"
+  case "$sub" in "$cwd"/*) root="$sub"; in_git=1 ;; esac
+fi
+
 # Only guard the project Claude is working in: a scratch script in a temp folder
 # or a file in another repository is not the user's code.
 case "$file" in "$root"/*) ;; *) exit 0 ;; esac
-rel="${file#"$root"/}"
 
 # Does the project already contain other source code?
+# Vendored and build folders do not count (keep in sync with SKIP_DIRS in style-counts.py).
 src_re='\.(py|js|jsx|mjs|cjs|ts|tsx|go|rs|java|kt|rb|php|c|h|cpp|cc|hpp|cs|swift|sh|scala|dart|lua)$'
+skip_re='(^|/)(\.git|node_modules|vendor|third_party|dist|build|out|target|__pycache__|\.venv|venv|\.tox|\.next|\.nuxt|coverage|\.idea|\.gradle|Pods|bin|obj|site-packages|\.mypy_cache|\.pytest_cache)/'
+rel="${file#"$root"/}"
 if [ "$in_git" = 1 ]; then
-  has_code="$(g -C "$root" ls-files --cached --others --exclude-standard 2>/dev/null \
-    | grep -E "$src_re" | grep -vxF -- "$rel" | head -1)"
+  list="$(g -C "$root" ls-files --cached --others --exclude-standard 2>/dev/null)"
 else
-  has_code="$(find "$root" -maxdepth 4 \
-    \( -name node_modules -o -name .git -o -name vendor -o -name venv -o -name .venv \) -prune -o \
-    -type f ! -path "$file" -print 2>/dev/null | grep -E "$src_re" | head -1)"
+  list="$(cd "$root" && find . -maxdepth 4 \( -name node_modules -o -name .git -o -name vendor \) -prune -o -type f -print 2>/dev/null | sed 's#^\./##')"
 fi
+has_code="$(printf '%s\n' "$list" | grep -iE "$src_re" | grep -vxF -- "$rel" | grep -vE "$skip_re" | head -1)"
 [ -n "$has_code" ] || exit 0
 
 # Block only if the mark could be written; otherwise every edit of the session

@@ -32,7 +32,7 @@ SKIP_NAME = re.compile(
     r"(\.min\.|\.lock$|-lock\.|package-lock|\.generated\.|_pb2|\.pb\.go$|\.d\.ts$|\.snap$)"
 )
 MAX_BYTES = 1000000
-# Declaration patterns backtrack badly on very long lines; real declarations are short.
+# Pattern work (quotes, imports, declarations) backtracks badly on very long lines; real code lines are short.
 MAX_DECL_LINE = 400
 SHA = re.compile(r"^[0-9a-fA-F]{4,40}$")
 # Never let the repository's own files configure git: a committed folder shaped
@@ -93,7 +93,7 @@ IDIOMS = {
     },
     "javascript": {
         "try": r"\btry\s*\{", "catch_call": r"\.catch\(", "console": r"\bconsole\.\w+\(",
-        "require": r"\brequire\(", "import_from": r"^\s*import\s.+\sfrom\s", "async_await": r"\bawait\b",
+        "require": r"\brequire\(", "import_from": r"^[ \t]*import[ \t][^\n]+[ \t]from[ \t]", "async_await": r"\bawait\b",
         "arrow_fn": r"=>", "function_kw": r"\bfunction\b",
     },
     "go": {
@@ -177,11 +177,11 @@ def list_files(root, since):
     try:
         if since:
             # Against the working tree, plus untracked files: uncommitted work counts too.
-            out = subprocess.run(GIT + ["-C", root, "diff", "--name-only", since],
+            out = subprocess.run(GIT + ["-C", root, "diff", "--name-only", "-z", "--relative", since],
                                  capture_output=True, text=True, check=True).stdout
-            out += subprocess.run(GIT + ["-C", root, "ls-files", "--others", "--exclude-standard"],
+            out += subprocess.run(GIT + ["-C", root, "ls-files", "--others", "--exclude-standard", "-z"],
                                   capture_output=True, text=True, check=True).stdout
-            files = sorted({f for f in out.splitlines() if os.path.exists(os.path.join(root, f))})
+            files = sorted({f for f in out.split("\0") if f and os.path.exists(os.path.join(root, f))})
         else:
             out = subprocess.run(GIT + ["-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
                                  capture_output=True, text=True, check=True).stdout
@@ -246,6 +246,13 @@ def analyze_file(lang, text):
         is_comment = s.startswith(cstart)
         if is_comment:
             st["comment"] += 1
+        if len(raw) > MAX_DECL_LINE:
+            # Minified or generated code: the quote, import and declaration patterns backtrack
+            # badly on lines like this, so such a line counts for length and indent only.
+            flush_group()
+            continue
+        if is_comment:
+            pass
         elif lang in ("python", "ruby", "javascript", "typescript", "php"):
             code = LINE_COMMENT.sub("", s) if lang not in ("python", "ruby") else s
             st["dq"] += len(DQ.findall(code))
@@ -274,7 +281,7 @@ def analyze_file(lang, text):
                 st["abs_imports"] += 1
         else:
             flush_group()
-        if not is_comment and len(raw) <= MAX_DECL_LINE:
+        if not is_comment:
             decl = BLANK_RUN.sub(" ", raw)  # collapse runs: the patterns only need words
             if fre:
                 fm = fre.search(decl)
@@ -319,6 +326,8 @@ def main():
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
     a = ap.parse_args()
     root = os.path.abspath(a.root)
+    if not os.path.isdir(root):
+        ap.error("%s is not a folder" % a.root)
     if a.since and not SHA.match(a.since):
         ap.error("--since must be a commit hash (4-40 hex characters), got %r" % a.since)
     if a.since and subprocess.run(GIT + ["-C", root, "rev-parse", "--verify", "--quiet", a.since + "^{commit}"],

@@ -134,6 +134,16 @@ mkbare "$T/bare" "$T/PWNED"
 check block "repo with a planted bare-repository folder (still guarded)" "$T/bare/src/app.py" s16
 expect_absent "planted git config never runs" "$T/PWNED"
 
+# Round-1 double review: non-ASCII names, vendored code in git, upper-case extensions, '..', parent folders.
+mkdir -p "$T/uni/çalışma" && ( cd "$T/uni" && git init -q && printf 'x = 1\n' > çalışma/a.py && printf 'y = 1\n' > çalışma/b.py && git add -A && git commit -qm i )
+check block "git project whose files have non-ASCII names" "$T/uni/çalışma/a.py" s17
+mkdir -p "$T/vend/vendor/lib" "$T/vend/node_modules/p" && ( cd "$T/vend" && git init -q && printf 'x = 1\n' > vendor/lib/v.py && git add -A && git commit -qm i && printf 'y = 1\n' > node_modules/p/i.js )
+check pass "committed vendor/ and untracked node_modules/ do not count" "$T/vend/main.py" s18
+mkdir -p "$T/up" && ( cd "$T/up" && git init -q && printf 'x = 1\n' > A.PY && printf 'y = 1\n' > b.py && git add -A && git commit -qm i )
+check block "upper-case extension is a source file" "$T/up/A.PY" s19
+check pass "a path with .. is not normalised, so it is ignored" "$T/up/nope/../../outside.py" s20
+check block "Claude Code started in a parent folder of several projects" "$T/up/b.py" s21 EVERY_CORNER_NOOP=1 "$T"
+
 # 5. Bad input must never error or block.
 run_case pass "malformed input is ignored" EVERY_CORNER_NOOP=1 'not json'
 run_case pass "a relative path is ignored" EVERY_CORNER_NOOP=1 "{\"session_id\":\"rel-@P@\",\"cwd\":\"$T/p1\",\"tool_input\":{\"file_path\":\"app/orders.py\"}}"

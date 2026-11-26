@@ -7,7 +7,7 @@ S=skills/every-corner-matchcodebase/scripts/style-counts.py
 F=tests/matchcodebase/fixtures
 pass=0; fail=0
 check() { # name, python expression over d (the JSON report)
-  if python3 - "$2" "$3" <<'PY'
+  if python3 -I - "$2" "$3" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[2]))
 sys.exit(0 if eval(sys.argv[1]) else 1)
@@ -17,8 +17,8 @@ PY
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 # shellcheck source=git-fixtures.sh
 . tests/matchcodebase/git-fixtures.sh
-python3 $S $F/odd-python --json > "$TMP/py.json" || { echo "FAIL script crashed on odd-python"; exit 1; }
-python3 $S $F/semi-less-js --json > "$TMP/js.json" || { echo "FAIL script crashed on semi-less-js"; exit 1; }
+python3 -I $S $F/odd-python --json > "$TMP/py.json" || { echo "FAIL script crashed on odd-python"; exit 1; }
+python3 -I $S $F/semi-less-js --json > "$TMP/js.json" || { echo "FAIL script crashed on semi-less-js"; exit 1; }
 
 check "python: tabs are the dominant indent"       "d['languages']['python']['indent']['dominant']=='tabs'" "$TMP/py.json"
 check "python: single quotes dominate"             "d['languages']['python']['quotes']['dominant']=='single'" "$TMP/py.json"
@@ -35,7 +35,7 @@ check "js: legacy-report.js is an outlier"         "any(o['path'].endswith('lega
 check "js: npm scripts found"                      "d['tooling']['commands'].get('test')=='npm run test'" "$TMP/js.json"
 
 # The output must contain numbers and file names, never code (R2).
-out=$(python3 $S $F/odd-python)
+out=$(python3 -I $S $F/odd-python)
 if echo "$out" | grep -q -E "def |return |append\("; then fail=$((fail+1)); echo "FAIL output contains code"; else pass=$((pass+1)); echo "PASS output contains no code"; fi
 
 # R2/R17: file counts add up and a 1000-file project is read in one fast pass.
@@ -48,7 +48,7 @@ for i in range(1000):
 open(os.path.join(root, "notes.md"), "w").write("# notes\n")
 PY
 start=$(python3 -c 'import time;print(time.time())')
-python3 $S "$TMP/big" --json > "$TMP/big.json"
+python3 -I $S "$TMP/big" --json > "$TMP/big.json"
 elapsed=$(python3 -c "import time;print(round(time.time()-$start,2))")
 check "1000 files: counted + skipped == listed"    "d['files_counted']+sum(d['skipped'].values())==d['files_listed']==1001" "$TMP/big.json"
 check "1000 files: all 1000 python files counted"  "d['languages']['python']['files']==1000" "$TMP/big.json"
@@ -85,6 +85,26 @@ else pass=$((pass+1)); echo "PASS --since accepts only a commit hash"; fi
 stamp=$(git -C "$H" log -1 --format=%h)
 python3 -I $S "$H" --since "$stamp" --json > "$TMP/since.json"
 check "--since counts uncommitted and untracked changes" "d['languages']['python']['files']==2" "$TMP/since.json"
+
+# Round-1 double review: patterns that backtrack on one long or blank-line-heavy file.
+mkdir -p "$TMP/slow"
+python3 -I -c "
+import sys; d = sys.argv[1]
+open(d + '/a.ts', 'w').write(' \n' * 100000)
+open(d + '/b.py', 'w').write('x = ' + '\"\\\\' * 100000 + '\n')
+open(d + '/c.js', 'w').write('import ' + 'a ' * 100000 + '\n')" "$TMP/slow"
+timed "blank-line, quote-backslash and import-heavy files finish" 10 python3 -I $S "$TMP/slow"
+
+# --since: non-ASCII names, and a root that is a subfolder of the repository.
+G="$TMP/since"; mkdir -p "$G/pkg/çalışma" && ( cd "$G" && git init -q && printf 'x = 1\n' > pkg/çalışma/a.py && git add -A && git commit -qm i )
+( cd "$G" && printf 'y = 1\n' > pkg/çalışma/new.py && printf 'z = 1\n' > pkg/plain.py && printf 'o = 1\n' > outside.py )
+stamp=$(git -C "$G" log -1 --format=%h)
+python3 -I $S "$G" --since "$stamp" --json > "$TMP/s1.json"
+python3 -I $S "$G/pkg" --since "$stamp" --json > "$TMP/s2.json"
+check "--since lists non-ASCII and untracked files"  "d['files_listed']==3" "$TMP/s1.json"
+check "--since from a subfolder root lists only that folder" "d['files_listed']==2" "$TMP/s2.json"
+if python3 -I $S "$TMP/no-such-folder" >/dev/null 2>&1; then fail=$((fail+1)); echo "FAIL a missing folder was accepted"
+else pass=$((pass+1)); echo "PASS a missing folder stops with an error"; fi
 
 # Tooling files are read the same safe way, and a stale --since stamp is an error.
 mkdir -p "$TMP/tool" && printf 'x = 1\n' > "$TMP/tool/a.py" && mkfifo "$TMP/tool/Makefile" "$TMP/tool/package.json"
