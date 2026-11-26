@@ -190,6 +190,16 @@ printf 'x = 1\n' > "$T/deep4/d1/d2/d3/d4/a.py"; printf 'x = 1\n' > "$T/deep5/d1/
 check block "no git: code four folders deep counts" "$T/deep4/new.py" s27
 check pass  "no git: code five folders deep is not searched for" "$T/deep5/new.py" s28
 
+# Round 4 (second reviewer): LC_ALL=C in the hook, and the guard folder is never written through a symlink.
+mkdir -p "$T/enc/app" && ( cd "$T/enc" && git init -q && printf 'x = 1\n' > app/a.py && git add -A && git commit -qm i )
+run_case block "a byte that is not UTF-8 in the path, under a UTF-8 locale" LC_ALL=en_US.UTF-8 \
+  "{\"session_id\":\"enc-@P@\",\"cwd\":\"$T/enc\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$T/enc/app/new$(printf '\351').py\"}}"
+mkdir -p "$T/pd" "$T/linktarget" && ln -s "$T/linktarget" "$T/pd/every-corner-style-guard"
+mkproject "$T/p12"
+check pass "a symlinked mark folder: nothing is blocked" "$T/p12/app/new.py" symlink CLAUDE_PLUGIN_DATA="$T/pd"
+expect_absent "nothing is written through a symlinked mark folder (jq)" "$T/linktarget/symlink-jq"
+expect_absent "nothing is written through a symlinked mark folder (raw)" "$T/linktarget/symlink-raw"
+
 # 5. Bad input must never error or block.
 run_case pass "malformed input is ignored" EVERY_CORNER_NOOP=1 'not json'
 run_case pass "a relative path is ignored" EVERY_CORNER_NOOP=1 "{\"session_id\":\"rel-@P@\",\"cwd\":\"$T/p1\",\"tool_input\":{\"file_path\":\"app/orders.py\"}}"

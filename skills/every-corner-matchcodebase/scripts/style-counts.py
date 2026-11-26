@@ -348,6 +348,7 @@ def main():
     folders = collections.Counter()
     per_lang = collections.defaultdict(list)
     started = time.monotonic()
+    real_root, inside = os.path.realpath(root), {}
     for n, rel in enumerate(files):
         if time.monotonic() - started >= a.budget:
             skipped["not reached (%g s time budget)" % a.budget] += len(files) - n
@@ -365,7 +366,12 @@ def main():
         if not lang:
             skipped["not source (docs, data, media, config)"] += 1
             continue
-        text, why = read_regular(os.path.join(root, rel), MAX_BYTES)
+        full = os.path.join(root, rel)
+        folder = os.path.dirname(full)
+        if folder not in inside:   # a folder in the middle of the path may be a symlink out of the project
+            real = os.path.realpath(folder)
+            inside[folder] = real == real_root or real.startswith(real_root + os.sep)
+        text, why = (None, "symlink or special file") if not inside[folder] else read_regular(full, MAX_BYTES)
         if why:
             skipped[why] += 1
             continue

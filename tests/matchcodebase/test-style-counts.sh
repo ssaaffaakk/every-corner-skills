@@ -198,6 +198,13 @@ python3 -I $S "$TMP/fsm" --json >/dev/null 2>&1
 if [ -e "$TMP/FSMON" ]; then fail=$((fail+1)); echo "FAIL core.fsmonitor from the repository config ran"
 else pass=$((pass+1)); echo "PASS core.fsmonitor from the repository config never runs"; fi
 
+# A folder in the middle of a tracked path replaced by a symlink to somewhere else is not read.
+mkdir -p "$TMP/outside" && printf 'q = 1\n' > "$TMP/outside/b.py"
+mkdir -p "$TMP/mid/a" && ( cd "$TMP/mid" && git init -q && printf 'x = 1\n' > a/b.py && printf 'y = 1\n' > ok.py && git add -A && git commit -qm i )
+rm -r "$TMP/mid/a" && ln -s "$TMP/outside" "$TMP/mid/a"
+python3 -I $S "$TMP/mid" --json > "$TMP/mid.json"
+check "a symlinked folder inside the project is not followed" "d['files_counted']==1 and d['skipped'].get('symlink or special file')==1" "$TMP/mid.json"
+
 # --since: a file named like the commit must not make git fail (and fall back to a full count).
 H2="$TMP/ambig"; mkdir -p "$H2" && ( cd "$H2" && git init -q && printf 'x = 1\n' > a.py && git add -A && git commit -qm one \
   && printf 'y = 1\n' > b.py && git add -A && git commit -qm two )
