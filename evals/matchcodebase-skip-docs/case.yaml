@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: matchcodebase-skip-docs
+description: A docs-only typo fix must not start every-corner-matchcodebase.
+tags: [matchcodebase, should-not-trigger]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: "Fix the typo Teh in README.md."
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill, Edit, Write, Bash]

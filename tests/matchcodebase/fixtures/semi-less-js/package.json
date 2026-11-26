@@ -1,0 +1,4 @@
+{
+  "name": "semi-less-js",
+  "scripts": { "lint": "eslint .", "test": "node --test" }
+}

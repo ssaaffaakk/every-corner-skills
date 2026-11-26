@@ -8,7 +8,7 @@
   <a href="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml"><img src="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml/badge.svg" alt="Tests"/></a>
   <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fssaaffaakk%2Fevery-corner-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=f59e0b" alt="Version"/>
   <img src="https://img.shields.io/badge/Claude_Code-plugin-D97757" alt="Claude Code plugin"/>
-  <img src="https://img.shields.io/badge/always--on_cost-~300_tokens-0f172a" alt="About 300 tokens always-on"/>
+  <img src="https://img.shields.io/badge/always--on_cost-~500_tokens-0f172a" alt="About 500 tokens always-on"/>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/ssaaffaakk/every-corner-skills?color=22c55e" alt="MIT license"/></a>
   <a href="https://github.com/ssaaffaakk/every-corner-skills/stargazers"><img src="https://img.shields.io/github/stars/ssaaffaakk/every-corner-skills?style=social" alt="GitHub stars"/></a>
 </p>
@@ -27,7 +27,7 @@
 
 Your AI coding agent is fast. But it **edits code it doesn't understand**, **builds what it guessed you meant**, and **asks you to approve commands you can't read**.
 
-**every corner** fixes all three with three small skills that make Claude Code behave like the senior developer you wish you had next to you.
+**every corner** fixes all three with four small skills that make Claude Code behave like the senior developer you wish you had next to you.
 
 ## 🚀 Install in 30 seconds
 
@@ -38,7 +38,7 @@ Inside Claude Code:
 /plugin install every-corner@every-corner-skills
 ```
 
-Start a new session. That's it: three skills and a safety net, for about **300 tokens per session** until a skill is actually used.
+Start a new session. That's it: four skills and two small hooks, for about **500 tokens per session** until a skill is actually used.
 
 <details>
 <summary>Prefer the terminal, or copying files by hand?</summary>
@@ -59,7 +59,7 @@ Without the plugin system:
 git clone https://github.com/ssaaffaakk/every-corner-skills.git
 cd every-corner-skills
 mkdir -p ~/.claude/skills
-cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-explain ~/.claude/skills/
+cp -R skills/every-corner-tour skills/every-corner-interview skills/every-corner-matchcodebase skills/every-corner-explain ~/.claude/skills/
 ```
 
 The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
@@ -72,6 +72,7 @@ The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
 |---|---|---|
 | 🏠 new to a project | **every-corner-tour** | *"Give me a tour of this project."* |
 | 🧱 about to build something | **every-corner-interview** | *"Interview me, I want to add favorites."* |
+| 🧬 adding code to someone else's project | **every-corner-matchcodebase** | *"Match this project's style, then add favorites."* |
 
 🛑 **every-corner-explain** needs no command: it steps in on its own whenever Claude asks for permission to do something risky.
 
@@ -94,6 +95,17 @@ The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
 - 🧩 **Catches what AI usually misses.** Empty states, duplicates, sort order, deleted data, two users at once.
 - 📝 **A spec you can hold it to.** Every requirement gets a testable "done" check.
 - 🔁 **Builds, then checks itself.** When it's done, it reviews the result against the spec, line by line.
+
+### 🧬 every-corner-matchcodebase: *new code that looks like it was always there*
+
+> The project you're joining may look nothing like what an AI writes by default. It studies how the code is really written and used, then writes in exactly that style.
+
+- 🧮 **Counts every file, reads only what matters.** A small script (no AI tokens) tallies indentation, quotes, naming, imports, error handling and test layout across the whole project. The agent reads in full only the config, the area it will touch, a few examples and the odd files out.
+- 🔒 **Read-only study.** It never runs or installs your project while learning.
+- 📝 **Short style notes.** `STYLE.md` keeps only what your tools don't already enforce, each rule with a quoted example you can open.
+- 🧪 **Checks its own work.** After writing, it runs your formatter, linter and tests, then compares naming and structure with the nearest existing file.
+- ♻️ **Cached by commit.** An unchanged project costs almost nothing the second time. Bugs it finds in the old code are reported, not copied.
+- 🪝 **Starts on its own.** A small hook stops the first code edit of a session in a project that has code and sends the agent to this skill first (which reuses `STYLE.md` when it exists). It never blocks twice in a session, or if the skill already ran. Switch it off with `/plugin configure every-corner@every-corner-skills`.
 
 ### 🛑 every-corner-explain: *never click Accept blindly again*
 
@@ -131,18 +143,19 @@ Check this: Nobody else is working on this branch.
 
 > Let's follow what happens when someone opens a recipe page. Their browser asks for `/recipes/42`. The first stop is `src/server.js:12`, the front door… **The loop:** door → receptionist → desk → database → page. Almost every feature here follows it.
 
-Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md)
+Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md) · [match](examples/matchcodebase-example.md)
 
 ## 🔧 How it works
 
 ```mermaid
 flowchart LR
-    T["🏠 Tour<br/>explains the project"] -->|"TOUR.md"| I["🧱 Interview<br/>asks only what the<br/>code can't answer"]
-    I -->|"spec file"| B["Build<br/>in one go"]
+    T["🏠 Tour<br/>explains the project"] -->|"TOUR.md"| M["🧬 Match<br/>learns the code's style"]
+    M -->|"STYLE.md"| I["🧱 Interview<br/>asks only what the<br/>code can't answer"]
+    I -->|"spec file"| B["Build<br/>in the project's style"]
     B --> E["🛑 Explain<br/>each risky step:<br/>'step 3 of your spec'"]
 ```
 
-The skills hand their notes to each other. The tour saves `docs/every-corner/TOUR.md`, so the interview skips everything the tour already found. The interview saves a spec per feature, so the build follows exactly what you agreed and every explanation can point back to it.
+The skills hand their notes to each other. The tour saves `docs/every-corner/TOUR.md`, and the match skill saves `docs/every-corner/STYLE.md`, so the interview skips everything they already found. The interview saves a spec per feature, so the build follows exactly what you agreed and every explanation can point back to it.
 
 ## ✨ What makes it different
 
@@ -152,7 +165,7 @@ The skills hand their notes to each other. The tour saves `docs/every-corner/TOU
 - **🗺️ Proves "every corner".** The tour lists every folder as explained, mentioned, or skipped and why. Nothing is skipped silently.
 - **🤫 Quiet unless it matters.** People stop reading warnings they see on every action, so safe actions get nothing and irreversible ones look different.
 - **🧪 Stress-tested to failure.** Two rounds of adversarial scenarios, run as real sessions against a simulated difficult user. Three failed on the first run (the skill never loaded); [every failure and fix is published](docs/stress-test.md), including what is still unverified.
-- **🪶 Light.** About 300 tokens per session until a skill runs. The tour is cached by commit, so it only re-reads what changed.
+- **🪶 Light.** About 500 tokens per session until a skill runs (the name and description of the four skills, about 2,000 characters at roughly 4 characters per token). The tour is cached by commit, so it only re-reads what changed.
 
 ## ❓ FAQ
 

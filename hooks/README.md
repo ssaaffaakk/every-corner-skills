@@ -69,3 +69,20 @@ This runs every example command twice (with `jq` and with the no-`jq` fallback) 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the wording rules.
 
 > **A safety net, not a security boundary.** Pattern matching can be evaded, and the hook will miss things. For a stronger guard, combine it with a dedicated tool such as [dcg](https://github.com/Dicklesworthstone/destructive_command_guard), and use Claude Code's permission rules.
+
+---
+
+# The style guard hook
+
+`require-style-study.sh` makes sure `every-corner-matchcodebase` runs before code is written in a project that already has code. A skill description alone did not start the skill for small requests (2 of 2 test runs skipped it), and a hook runs every time.
+
+It watches `Edit`, `Write` and `MultiEdit`. It blocks **once per session**, and only when both are true:
+
+- the file being written is a source file (`.py`, `.js`, `.ts`, `.go`, `.rs` and similar) inside the project Claude is working in (a scratch script in a temp folder does not count);
+- the project already contains other source files (code in `node_modules`, `vendor` and virtual environments does not count).
+
+The agent is told to run the skill and then repeat the edit. Without `docs/every-corner/STYLE.md` the skill studies the project; with it, the skill reuses the notes and re-checks only files changed since, which is cheap. (Without this nudge a later session never opened `STYLE.md`.) It never blocks twice in a session, not at all once the skill has run in that session, never in an empty project, and never for docs or config files. If it cannot save its once-per-session mark (an unwritable folder), it does not block at all. `.vue` and `.svelte` files are not watched, and neither are paths that contain `..`. A file that belongs to a repository of its own below the working folder (a nested repository, or one of several projects in a parent folder) is judged by that repository. In a project without git it looks for other code in files up to four folders deep, and reads at most the first 50,000 files it finds. Without `jq`, a single Write of tens of megabytes (about 25 MB in a test) can take longer than the hook's 10-second timeout; the edit is then allowed through. Tests: `./hooks/test-style-guard.sh` (101 checks, each case with and without `jq`; also run in CI).
+
+**Headless runs:** the block is a message, not a question, so `claude -p` keeps going: the agent runs the skill and then edits. That costs a few extra turns in every new session (in the first smoke test, a fix request took 12 turns, $0.43 and 77 s with the study against 6 turns, $0.29 and 40 s without). Switch the option off for unattended runs if that matters.
+
+**Switch it off** without the plugin option by setting the environment variable `CLAUDE_PLUGIN_OPTION_STYLEGUARD=false` (any settings file that sets environment variables for a session can do it, including a project's `.claude/settings.json`). **You need:** nothing extra; `jq` is used when present and a built-in fallback otherwise. **Installed the plugin?** It is on by default; turn it off with `/plugin configure every-corner@every-corner-skills` (option "Style guard hook"). For a manual install, copy the script like the safety net above and register it with the matcher `Edit|Write|MultiEdit|Skill` (the `Skill` part lets it notice that the skill already ran).
