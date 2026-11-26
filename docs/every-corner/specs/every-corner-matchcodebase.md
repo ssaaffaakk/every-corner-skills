@@ -69,10 +69,10 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 - Written in English, like all repo text (`CONTRIBUTING.md` line 3 and memory rule).
 - One `SKILL.md` per skill in `skills/<name>/`, valid front matter, imperative `description` so it triggers (`CHANGELOG.md` 1.0.3 lesson: soft descriptions failed to load).
 - Plugin version bump and `CHANGELOG.md`, `README.md`, `docs/how-it-works.md`, `examples/` updated when built (`CONTRIBUTING.md` "Changing a skill").
-- Work happens in a clone at `~/Desktop/every-corner-skills`; the installed plugin copy is a cache and is not edited.
+- Work happens in a clone of this repository; the installed plugin copy is a cache and is not edited.
 
 - When editing an existing file, new lines match the surrounding lines exactly and untouched lines are never reformatted - follows from "perfect match".
-- Similar prior art exists locally (`kod-mevcut-stile-uyum` skill: aligns architecture, not syntax); to be examined in the research phase.
+- Similar prior art exists outside this repository (a local skill that aligns architecture, not syntax); examined in the research phase.
 
 - Style notes are saved to `docs/every-corner/STYLE.md` (same folder as `TOUR.md`), stamped with the commit, and reused next session; re-read only what changed - mirrors the tour's caching.
 - v1 `SKILL.md` stays about the size of the tour skill (about 9 KB); real token counts come in the token phase.
@@ -103,7 +103,7 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 | Proof of match | Answered | Q7: automatic checks only (project's own formatter/linter/tests plus own style notes), no sample question to the user |
 | Huge projects (cost of reading every file) | Answered | Q8: user wants a faster, cheaper way and asked for deep research; v1 default R12 |
 | "How it is used" evidence | Answered | Q9: read only (R3) |
-| Previous chat to learn from | Answered | Q10: "Feat/report tools"; only its last ~40 of 1230 messages were read (work in a colleague's repo with PR review and commit style) |
+| Previous chat to learn from | Answered | Q10: an earlier chat; only its last ~40 of 1230 messages were read (work in a colleague's repo with PR review and commit style) |
 | Done checks | Defaulted | R1-R18 above |
 | Token budget for v1 | Defaulted | about tour size (9 KB); measured in phase 3 |
 
@@ -119,7 +119,7 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 - Q12 "Make it token and time saving, but don't forget: did we find alternatives?" -> added the Alternatives considered section and R17-R18 (token and time). Read as: save tokens and time, and record the alternatives from the research in the spec.
 - Q8 Huge projects? -> "should be a way to make it faster and less token, do /deep-research". Parked to the research phase; v1 default R12.
 - Q9 How is usage learned? -> Read only.
-- Q10 Which earlier chat? -> Feat/report tools.
+- Q10 Which earlier chat? -> an earlier chat.
 - Q3 What may the agent do to existing files? -> Rejected: "what I want is understand their code base sentence by sentence before we write code; when we start coding write the exact same style". Recorded as: no edit restriction beyond style match.
 
 ## Review (after build)
