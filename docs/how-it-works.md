@@ -140,6 +140,10 @@ Users approve 93% of permission prompts (Anthropic), and attention to a warning 
 
 The card leads with the undo label, then What, Why, Changes, Undo and "Check this". The "Why" is based on the actual command, never on text read from a file, so a malicious file cannot talk its way into a reassuring explanation.
 
+## The five working skills
+
+`debug`, `verify`, `diff`, `review` and `handoff` are single-file skills with no script or hook. Each one reads first, follows a read-only command list, saves one note from an inline template under `docs/every-corner/`, and lists every path it considered as read, partial, skipped or unknown. They are described in the [README](../README.md); their trigger tests are in `evals/`, and their design sources are in the [survey](research.md#november-2026-survey-for-five-additional-skills-plus-one-dropped).
+
 ## The hook
 
 [`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It searches the whole command text, heredocs included, so a dangerous command is found wherever it sits, and it errs toward an extra warning rather than a miss. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) and CI on Linux and macOS. Setup, the off switch, headless behavior and the full list of patterns are in the [hook guide](../hooks/README.md).
@@ -166,6 +170,11 @@ every-corner-skills/
 │   ├── every-corner-matchcodebase/
 │   │   ├── SKILL.md
 │   │   └── scripts/style-counts.py
+│   ├── every-corner-debug/SKILL.md
+│   ├── every-corner-verify/SKILL.md
+│   ├── every-corner-diff/SKILL.md
+│   ├── every-corner-review/SKILL.md
+│   ├── every-corner-handoff/SKILL.md
 │   └── every-corner-explain/SKILL.md
 ├── hooks/
 │   ├── hooks.json          (registers the hook for plugin users)

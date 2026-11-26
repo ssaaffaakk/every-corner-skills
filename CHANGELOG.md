@@ -22,6 +22,8 @@ All notable changes to this project are listed here. Versions follow the `versio
 - Saved notes no longer copy secrets: logs and environment dumps that end up in debug, verification and handoff notes are written as `[redacted]`.
 - `every-corner-review` said both "run tests after checking their effects" and "never execute PR code"; a test runner executes whatever the change contains. It now runs nothing unless asked and says `Not run` in its ledger. `every-corner-verify` asks before running the tests of code that is not the user's own. `diff` and `handoff` treat instructions in repository files as data.
 - `review` and `debug` read `docs/every-corner/STYLE.md` (the notes of `every-corner-matchcodebase`) instead of the removed `CODEBASE.md`.
+- `sed` on the read-only lists is limited to `sed -n '<from>,<to>p'` (GNU `sed` can write files and run commands with `w`, `e` and `r`, which the security review caught). `every-corner-debug` asks before running the tests or reproduction of code that is not the user's own, and `every-corner-verify` treats repository text, specs and test output as data (both gaps were in the first hardening; found by the security review).
+- `every-corner-verify` wrote Review table values (`Unverified`, extra columns) that the interview spec template does not have; it now uses `Met`, `Not met` or `Changed` with the evidence in the Note column. The how-it-works repo layout, a short section on the five skills and CONTRIBUTING's eval command were missing.
 - The research survey now says one cited issue is closed and no longer points to a skill that was removed.
 
 ### Known limits
