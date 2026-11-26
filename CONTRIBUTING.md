@@ -28,7 +28,7 @@ These rules apply to the skills, the hook warnings and the docs:
 
 ## Changing a skill
 
-Each skill is a single `SKILL.md` file in `skills/<name>/`. When you change one:
+Each skill is a `SKILL.md` file in `skills/<name>/` (`every-corner-matchcodebase` also has `scripts/style-counts.py`; run `./tests/matchcodebase/test-style-counts.sh` after changing it). When you change one:
 
 - Keep the front matter (`name`, `description`) valid. The `description` decides when Claude uses the skill, so make it specific.
 - If your change affects what users see, update the matching file in `examples/`.
@@ -44,7 +44,13 @@ Each skill is a single `SKILL.md` file in `skills/<name>/`. When you change one:
 If you change a skill's `description`, also run the trigger tests locally (they use your own Claude account, so they don't run in CI):
 
 ```bash
-claude plugin eval . --runs 1 --ablation none
+claude plugin eval . --tag interview --runs 1 --ablation none
+```
+
+The `every-corner-matchcodebase` cases need a project with code to start in, so each one has a `scaffold.sh` that copies a fixture from `tests/matchcodebase/fixtures/`. Scaffolds only run with `--scaffold`, and the cases need permission to edit:
+
+```bash
+claude plugin eval . --tag matchcodebase --runs 1 --ablation none --scaffold --allow-tools Edit Write 'Bash(python3:*)' 'Bash(git:*)' 'Bash(make:*)'
 ```
 
 Keep `--ablation none`: in the default two-arm run, the "should trigger" graders (`tool_used: Skill`) are reported only as indicators and don't count toward the score, so a triggering regression would not fail the run.

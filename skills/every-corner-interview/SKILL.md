@@ -45,7 +45,7 @@ The tier sets how much to read and how big the spec is. It never caps the questi
 
 ## Step 2: Read before you ask
 
-1. If `tour_file` exists, read it first. Check its commit stamp against `git log -1`; re-check only what changed.
+1. If `tour_file` exists, read it first. Check its commit stamp against `git log -1`; re-check only what changed. If the project has source code, `every-corner-matchcodebase` runs before this skill; read its `docs/every-corner/STYLE.md` and treat the style rows as Discovered.
 2. Otherwise take a proportional look, about 10-15 reads for T1-T2, more only for a specific open row:
    - **Desk:** the files this will touch, who calls them, the tests that cover them.
    - **Drawers:** config, data shapes, and how similar features are already built. Find one good example to copy.

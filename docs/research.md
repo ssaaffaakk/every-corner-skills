@@ -140,7 +140,7 @@ The research reframes the original question. "How many questions?" is the wrong 
 The largest open risk is that no published study yet ties any of this to one-shot build success with real users. The evidence comes from LLM-simulated users, survey methodology and security-warning research, not from interviews of developers building features. The skill should therefore record its own telemetry: questions asked per tier, how often users choose "build now", and how many post-build fixes trace back to a Defaulted ledger row. Those numbers would turn this report's judgment calls into tuned parameters within a few dozen sessions.
 
 
-## November 2026 survey for six additional skills
+## November 2026 survey for five additional skills (plus one dropped)
 
 Read-only sweep of 31 existing skill or command files across five projects, plus four review tools. License is the repository's GitHub license metadata; it is not a license claim about copied text. We reused workflow ideas and wrote original skill text. No outside code or skill was installed or run.
 
@@ -185,11 +185,13 @@ Read-only sweep of 31 existing skill or command files across five projects, plus
 | [OpenReviewer](https://github.com/Ascent-AI-org/OpenReviewer) | Apache-2.0 | Refute a candidate finding before reporting it; do not turn a speculative concern into a bug. |
 | [Aider](https://github.com/Aider-AI/aider) | Apache-2.0 | Map task-relevant files; do not present a repository map as full code coverage. |
 
-### Open issues checked for failure modes
+### Issues checked for failure modes
+
+State on 2026-11-26: all are open except PR-Agent #5144, which has since been closed.
 
 - [Superpowers #2724](https://github.com/obra/superpowers/issues/2724): a `HEAD~1` review base can omit earlier commits. Diff and review use the actual PR base and merge base.
-- [Superpowers #2726](https://github.com/obra/superpowers/issues/2726): README workflow drift makes promises inaccurate. README wording here describes the implemented skills and avoids a per-session token estimate.
-- [Anthropic plugins #7178](https://github.com/anthropics/claude-plugins-official/issues/7178): a reviewer imported another project's logging conventions. Codebase and review require current-project evidence.
+- [Superpowers #2726](https://github.com/obra/superpowers/issues/2726): README workflow drift makes promises inaccurate. The README's always-on token figure here is computed from the skill descriptions (3,451 characters for nine skills, about 900 tokens) and rechecked when a skill is added.
+- [Anthropic plugins #7178](https://github.com/anthropics/claude-plugins-official/issues/7178): a reviewer imported another project's logging conventions. Review requires current-project evidence, and `every-corner-matchcodebase` cites only lines it re-opened.
 - [CodeRabbit skills #77](https://github.com/coderabbitai/skills/issues/77): skill workflow gaps were found by reviewing the skill itself. Our verification ledger treats trigger evals and skipped checks separately.
 - [Spec Kit #5566](https://github.com/github/spec-kit/issues/5566): a stored feature path can point at a missing folder. Verify an existing spec path and its status before using it.
 - [PR-Agent #5144](https://github.com/The-PR-Agent/pr-agent/issues/5144): ignored files can be excluded from an unreviewed count. Diff and review list partial, skipped and unknown paths explicitly.
@@ -197,4 +199,4 @@ Read-only sweep of 31 existing skill or command files across five projects, plus
 - [reviewdog #2151](https://github.com/reviewdog/reviewdog/issues/2151): file links lose subdirectory prefixes. Every citation uses a complete project-root path.
 - [reviewdog #2825](https://github.com/reviewdog/reviewdog/issues/2825): unknown severity can be misranked. Review keeps unverified questions outside severity findings.
 
-The sources show recurring problems with scope and proof, but they do not prove these six prompts will trigger correctly or improve developer outcomes. The local eval run is reported in the PR.
+The survey also covered a sixth skill, `every-corner-codebase`; it was dropped because `every-corner-matchcodebase` (issue #25) does that job with a counting script and a hook. The sources show recurring problems with scope and proof, but they do not prove these five prompts will trigger correctly or improve developer outcomes. The local eval run is reported in the PR.

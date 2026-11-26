@@ -1,7 +1,7 @@
 {
   "name": "every-corner",
-  "version": "1.1.0",
-  "description": "Claude Code skills for understanding a project, asking the right questions, matching its conventions, debugging, verifying, explaining and reviewing changes, and handing work off safely.",
+  "version": "1.2.0",
+  "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, writes new code in your project's exact style, finds the cause of bugs before fixing them, proves a change works, explains and reviews diffs, hands work off between sessions, and explains every risky command before you click Accept.",
   "author": {
     "name": "ssaaffaakk",
     "url": "https://github.com/ssaaffaakk"
@@ -16,6 +16,8 @@
     "code-safety",
     "beginners",
     "senior-developer",
+    "code-style",
+    "conventions",
     "debugging",
     "code-review",
     "verification"
@@ -25,6 +27,12 @@
       "type": "boolean",
       "title": "Safety-net hook",
       "description": "Warn before dangerous shell commands (rm -rf, git push --force, DROP TABLE and more) with a plain-English explanation and a safer option. Safe commands are never interrupted.",
+      "default": true
+    },
+    "styleguard": {
+      "type": "boolean",
+      "title": "Style guard hook",
+      "description": "Before the first code edit of a session in a project that already has code, ask Claude to run every-corner-matchcodebase first (it studies the project, or reuses docs/every-corner/STYLE.md when it exists). Blocks at most once per session, and not at all if the skill already ran. Turn off if you do not want it.",
       "default": true
     }
   }

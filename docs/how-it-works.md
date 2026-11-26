@@ -8,8 +8,8 @@ This page explains the design behind the skills and the evidence for each choice
 |---|---|---|
 | `every-corner-tour` | Someone shows you around a house that is already built | `docs/every-corner/TOUR.md` |
 | `every-corner-interview` | You describe a new room; someone asks what it needs before building | `docs/every-corner/specs/<feature>.md` |
+| `every-corner-matchcodebase` | Before adding a room, someone studies how the rest of the house was built so the new room matches | `docs/every-corner/STYLE.md` |
 | `every-corner-explain` | Before knocking down a wall, someone tells you it can't be put back | nothing (it talks to you) |
-| `every-corner-codebase` | Copy how this house is built before adding a room | `docs/every-corner/CODEBASE.md` |
 | `every-corner-debug` | Trace a leak before repairing the wall | `docs/every-corner/debug/<bug>.md` |
 | `every-corner-verify` | Test the finished room against the plan | `docs/every-corner/verification/<change>.md` |
 | `every-corner-diff` | Walk through renovations before accepting them | `docs/every-corner/diffs/<change>.md` |
@@ -102,6 +102,29 @@ The interview ends only when no ledger row is Open, every requirement has a test
 
 Users of multi-file spec systems complained about ceremony and review burden (one Kiro bug fix turned into 16 acceptance criteria). One file per feature, sized to the tier, keeps the record without the paperwork. Large features are built in a fresh session from the spec, following Anthropic's documented workflow, so the interview transcript doesn't fill the context.
 
+## every-corner-matchcodebase
+
+**Goal:** new code in an existing project looks like the project's own code, and you can see how that was checked.
+
+```mermaid
+flowchart TD
+    R["0. Reuse<br/>STYLE.md current for this commit? skip the study"] --> C["1. Count every file<br/>script prints numbers, not code"]
+    C --> U["2. Learn usage<br/>configs, call sites, tests, git history (read-only)"]
+    U --> F["3. Read in full<br/>touched area, examples, outliers"]
+    F --> W["4-5. Keep only non-obvious rules<br/>write STYLE.md"]
+    W --> B["6-7. Hand over, then write<br/>in the nearest neighbor's shape"]
+    B --> V["8. Check<br/>formatter, linter, tests, then compare"]
+```
+
+**Key choices (from the [research report](every-corner/research/matchcodebase-landscape.md)):**
+
+- **Count, don't read.** Reading every file in full is the most expensive way to learn style. A standard-library script covers every file in one pass (about 0.2 s for 1,000 files) and returns frequencies and outliers; the model reads in full only what counts cannot tell it.
+- **Configs win.** An explicit formatter or linter rule needs no note in `STYLE.md`.
+- **Short notes only.** In one study, context files did not improve task success and raised cost by over 20%, except for non-standard practices (Gloaguen et al., arXiv 2602.11988). So `STYLE.md` holds only conventions the tools don't show.
+- **Verify, don't trust.** Formatting is the easiest style signal to imitate, so after the formatter and linter the skill compares naming and structure with the nearest existing file.
+- **Style, not defects.** Bugs and unsafe patterns in the old code are reported, not copied.
+- **A hook starts it.** A skill description is a request the model may skip; a hook runs every time. The guard blocks at most once per session and never in an empty project, so it cannot loop or nag.
+
 ## every-corner-explain
 
 **Goal:** approvals people actually read.
@@ -128,6 +151,7 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 - A tour is a verified map, not a full audit; the ledger tells you what was only outlined or skipped.
 - **"Read only" is an instruction, not a lock.** A skill cannot take tools away for a whole conversation: Claude Code's `allowed-tools` only pre-approves tools, and `disallowed-tools` clears when you send your next message. The tour is told not to edit code or run anything but read-only commands. For a hard guarantee, run it in plan mode, which does not let Claude change files (the tour then stays in chat instead of being saved). Denying only `Edit` and `Write` is not enough: shell commands can still write files.
 - Explanations come from the same model that proposed the action.
+- The match skill's description alone did not start it for very small requests (two of two test runs skipped it), so a hook (`hooks/require-style-study.sh`) blocks the first source edit once per session and sends the agent to it; it then started in two of two runs. On a 5-file project it cost more than not using it ($0.43 vs $0.29, one run each). Its token cost on larger projects and its win over a no-skill baseline are not measured yet; the numbers in the research report come from other tools and papers. The counting script's outlier flags are heuristics (for example, semicolon detection in JS and TS is approximate).
 
 ## Repo layout
 
@@ -139,16 +163,23 @@ every-corner-skills/
 ├── skills/
 │   ├── every-corner-tour/SKILL.md
 │   ├── every-corner-interview/SKILL.md
+│   ├── every-corner-matchcodebase/
+│   │   ├── SKILL.md
+│   │   └── scripts/style-counts.py
 │   └── every-corner-explain/SKILL.md
 ├── hooks/
 │   ├── hooks.json          (registers the hook for plugin users)
 │   ├── explain-risky-commands.sh
 │   ├── test-hook.sh
+│   ├── require-style-study.sh   (the style guard)
+│   ├── test-style-guard.sh
 │   └── README.md
 ├── evals/                  (skill trigger tests for `claude plugin eval`)
+├── tests/matchcodebase/    (fixtures, script tests, headless run helper)
 ├── examples/
 │   ├── tour-example.md
 │   ├── interview-example.md
+│   ├── matchcodebase-example.md
 │   └── permission-explanations.md
 ├── docs/
 │   ├── how-it-works.md

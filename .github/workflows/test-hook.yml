@@ -13,23 +13,27 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # On macOS, run the hooks with the system bash 3.2, as users' Macs do.
+      HOOK_BASH: ${{ matrix.os == 'macos-latest' && '/bin/bash' || 'bash' }}
     steps:
       - uses: actions/checkout@v4
       - name: Run hook tests (with jq and with the no-jq fallback)
-        env:
-          # On macOS, run the hook with the system bash 3.2, as users' Macs do.
-          HOOK_BASH: ${{ matrix.os == 'macos-latest' && '/bin/bash' || 'bash' }}
         run: |
           chmod +x hooks/explain-risky-commands.sh hooks/test-hook.sh
           ./hooks/test-hook.sh
+      - name: Run style guard hook tests
+        run: ./hooks/test-style-guard.sh
+      - name: Run style-counts tests
+        run: ./tests/matchcodebase/test-style-counts.sh
 
   shellcheck:
     name: ShellCheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: ShellCheck the hook and its tests
-        run: shellcheck -S warning hooks/*.sh
+      - name: ShellCheck the hooks, tests and eval scaffolds
+        run: shellcheck -S warning hooks/*.sh tests/matchcodebase/*.sh evals/*/scaffold.sh
 
   validate:
     name: Plugin validate

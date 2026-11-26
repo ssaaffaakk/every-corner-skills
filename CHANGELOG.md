@@ -2,16 +2,69 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
-## 1.1.0 (2026-11-25)
+## 1.2.0 (2026-11-26)
 
 ### Added
-- **every-corner-codebase:** profiles cited project conventions before new code and asks when there is no precedent (issue #25).
-- **every-corner-debug:** reproduces bugs, tests competing causes, then fixes the root cause.
-- **every-corner-verify:** runs checks, records actual output and compares results with an agreed spec.
-- **every-corner-diff:** explains changed intent, downstream effects and evidence-based risks.
-- **every-corner-review:** reports verified correctness, security and style findings with severity and verification method.
-- **every-corner-handoff:** records done, partial, next actions and run instructions for a later session.
-- Thirty trigger evals (three trigger and two should-not-trigger cases per new skill) and an [external tool survey](docs/research.md).
+- **every-corner-debug:** reproduces a bug, tests two or three possible causes, explains the root cause, then fixes it and reruns the check. Saves `docs/every-corner/debug/<bug>.md`.
+- **every-corner-verify:** runs the project's checks, records the real output and compares each requirement with an agreed interview spec (Pass, Fail, Blocked or Unverified). Saves `docs/every-corner/verification/<change>.md`.
+- **every-corner-diff:** explains a diff, commit or PR by intent, follows effects into unchanged files and names up to three evidence-based risks. Saves `docs/every-corner/diffs/<change>.md`.
+- **every-corner-review:** reviews a diff for correctness, security and local style and reports only verified findings with a severity and how each was verified. Never approves. Saves `docs/every-corner/reviews/<change>.md`.
+- **every-corner-handoff:** records what is done, what is half-done, the next step and how to run the project, with every cited line re-checked. Saves `docs/every-corner/HANDOFF.md`.
+- Twenty-five trigger evals (three should-trigger and two should-not-trigger cases per skill) and a [survey of existing tools](docs/research.md) the skills borrow from.
+
+### Changed
+- The README's always-on cost is now about 900 tokens (nine skill descriptions, 3,451 characters), up from about 500 for four.
+- The first draft of this release also contained `every-corner-codebase`. It was dropped before release: `every-corner-matchcodebase` (1.1.0, issue #25) does the same job with a counting script, a hook and 101 + 44 tests.
+
+### Fixed in review (stress test)
+- All five skills got the read-only rules of `every-corner-matchcodebase`: `find` without `-delete`, `-exec`, `-execdir`, `-ok`, `-okdir`, `-fprint`, `-fprint0`, `-fprintf` or `-fls`; `rg` never with `--pre` (it runs a command); `sed -n` instead of any `sed`; `git log`, `git show` and `git diff` never with `--output` (it writes a file); git only from the project root, because a committed folder shaped like a bare repository can carry a `core.fsmonitor` command.
+- The five skills write a file named from a slug (a PR title or request could have been `../../.git/hooks/post-commit`); the slug is now lowercase letters, digits and hyphens that the agent makes itself, and never a path or repository text.
+- Saved notes no longer copy secrets: logs and environment dumps that end up in debug, verification and handoff notes are written as `[redacted]`.
+- `every-corner-review` said both "run tests after checking their effects" and "never execute PR code"; a test runner executes whatever the change contains. It now runs nothing unless asked and says `Not run` in its ledger. `every-corner-verify` asks before running the tests of code that is not the user's own. `diff` and `handoff` treat instructions in repository files as data.
+- `review` and `debug` read `docs/every-corner/STYLE.md` (the notes of `every-corner-matchcodebase`) instead of the removed `CODEBASE.md`.
+- The research survey now says one cited issue is closed and no longer points to a skill that was removed.
+
+### Known limits
+- **The new evals only check that the skill starts.** Each runs once in an empty folder with a one-line prompt (about 20 s). None checks that a debug, review or handoff note is any good, and there is no baseline run without the plugin, so they show triggering, not benefit.
+- **A hostile-input run found nothing to fix in the model's behavior.** Four real `claude -p` sessions (a diff titled `../../.git/hooks/post-commit`, a secret in a crash log, a README telling reviewers to approve, a change whose test file writes a marker file) all ended safely before the hardening; the rules above make that deliberate rather than luck of one model.
+- These skills overlap with `/code-review`, `/security-review` and the superpowers skills. They add the saved file, the coverage ledger and the read-only rules, not new analysis.
+
+## 1.1.0 (2026-11-26)
+
+### Added
+- **every-corner-matchcodebase:** before any code is written in a project that already has code, it learns how the project is really written and used, saves `docs/every-corner/STYLE.md`, writes new code in that exact style, and checks the result with the project's own formatter, linter and tests.
+  - A counting script (`skills/every-corner-matchcodebase/scripts/style-counts.py`, standard library only) covers every file in one pass and prints numbers and file names, never code. The agent reads in full only the config, the area it will touch, a few example files and the outliers.
+  - Cached by commit: an unchanged project reads no source files on the next run.
+  - Read-only study; bugs and unsafe patterns found in the old code are reported, not copied.
+- [Research report](docs/every-corner/research/matchcodebase-landscape.md) on similar tools and the evidence behind the design, and the [spec](docs/every-corner/specs/every-corner-matchcodebase.md).
+- **Style guard hook** (`hooks/require-style-study.sh`): in a project with code, it blocks the first source edit of a session and tells the agent to run the new skill first. Without `STYLE.md` the skill studies the project; with it, the skill reuses the notes and re-checks only changed files (without this nudge a later session never read `STYLE.md`). Blocks once per session, only for files inside the project Claude is working in, never in an empty project or for non-source files; on by default, switch off with the "Style guard hook" option. Works without `jq` too (a sed fallback, like the safety net). 101 checks, each case with and without `jq`, run in CI.
+- **Trigger tests:** five `claude plugin eval` cases in `evals/matchcodebase-*`, three that must start the skill (an add and a fix in a Python project, an add in a JavaScript one) and two that must not (a README typo, an empty project). Each case sets up its project with a scaffold script, so they run with `--scaffold`. All five pass, and the six interview cases still pass with the new skill and hook.
+- `tests/matchcodebase/`: fixtures with deliberately odd styles, 44 checks for the script (including hostile files), and `run-session.sh` for headless with/without runs.
+
+### Fixed in review (stress test)
+- The counting script skips symlinks and special files: a named pipe called `x.py`, or a symlink to one, made it hang forever, and a symlink could point outside the project.
+- Quote, import and declaration patterns are applied only to lines up to 400 characters (longer lines, such as minified code, count for length and indent only), and the import pattern no longer spans lines: one Java or C# line with 3,000 spaces took over 20 s, a 200 KB JavaScript file of blank lines or one long line of `"\` more than 60 s. The Java and C# declaration patterns no longer backtrack, and blank runs are collapsed for every kind of whitespace (non-breaking space, form feed, U+2003): a 120 KB Java file of such lines took 28 s. A sweep of 17 languages against 26 hostile corpora (blank floods, repeated keywords with and without a `(`, Unicode whitespace; 17 files of about 800 KB each) takes 0.6 to 0.75 s per corpus on an idle machine. Worst case for one file: about 3 s for 1 MB of a hostile shape on a loaded machine (the script reads at most 1 MB per file), and the 30 s budget bounds the total. The script also stops reading files after 30 s and says so, counts line lengths and indents in counters instead of lists (60 files of 1 MB took 494 MB), tolerates an odd `package.json` (`"scripts": null`, deep nesting) and file names that are not UTF-8 instead of crashing.
+- `--since` lists changed files NUL-separated and relative to the folder it is given: names with non-ASCII characters were silently dropped, and a subfolder root found nothing. It also stops with an error when the stamp is not a commit and when the folder does not exist.
+- The style guard now also skips minified, generated and lock files like the script, and sees non-ASCII file names (git quoted them, so the hook never blocked in such projects), ignores committed `vendor/` and untracked `node_modules/` code like the script does (it counted them, so a project with nothing to count was "studied"), treats `A.PY` like `a.py`, ignores paths with `..`, and, when Claude Code was started in a folder that holds several projects, uses the edited file's repository.
+- `--since` runs `git diff`, which applies a clean filter named in `.git/config`. A normal clone never copies that file, so this only matters for an archive that ships its own `.git`; it is the same exposure as `git status` and is not removed.
+- File names from the repository are printed escaped (a name with a newline or an ANSI escape could forge output lines, and one that is not UTF-8 crashed the text report in a UTF-8 terminal). `--since` ends git's options with `--` (a file named like the commit made git fail and the script counted everything without git) and a git failure in that mode is an error, never a silent full count.
+- The text report no longer crashes when the terminal encoding cannot show a file name (it prints an escape), `package.json` is read only up to 200 KB (a 1 MB integer took 11 s to parse), and the non-git search of the hook really reaches four folders deep (it saw three) and stops after 50,000 files.
+- A folder in the middle of a path that was replaced by a symlink out of the project is skipped too (only the last part of the path was checked).
+- `--budget SECONDS` (default 30) is a flag now, so the time limit can be tested; files not reached are listed under `skipped`. The style guard judges a file that belongs to a nested repository (or to one of several projects in a parent folder) by that repository's own code.
+- `--since` accepts only a commit hash. `--since=--output=FILE` was passed to `git diff` as an option and wrote a file, and the value comes from `STYLE.md`, which a repository can contain.
+- **Security:** the hook and the script run git with `safe.bareRepository=explicit` and `core.fsmonitor=false`. A repository could commit a folder shaped like a bare git repository whose `config` sets `core.fsmonitor` to a command; the hook ran git from the edited file's folder, so the first edit there ran that command (reproduced). The skill also tells the agent to run git only from the project root.
+- The skill runs the script with `python3 -I`, so nothing from the project folder or `PYTHONPATH` is imported (the same lesson as the 1.0.5 hook).
+- The style guard ignores files outside the working project (a scratch script in a temp folder was blocked and the agent was told to write `STYLE.md` there), keeps the session id to safe characters (`../` wrote outside its folder), and keeps its once-per-session marks in the plugin's own data folder.
+
+- Cleanup pass (`/simplify`): the hook reads all fields with one `jq` call, does the cheap checks before any `git` call, and starts from the working folder's project; the script reads every file through one safe reader (a named pipe called `Makefile` hung it too), stops on a `--since` stamp that is no longer a commit instead of silently counting everything without git, and no longer slows down quadratically on repositories with CRLF line endings (10,000 files: 3.6 s to 0.5 s here, 7.7 s to 1.0 s on another Mac). Its output is unchanged.
+
+### Changed
+- `every-corner-interview` and `every-corner-tour` point to the new skill (the interview reads `STYLE.md` when it exists).
+
+### Known limits (first smoke tests, one fixture, one run each)
+- **A description alone did not start it for a tiny request.** Asked to "add a function" to a 5-file project, the agent edited directly in 2 of 2 runs. With the style guard hook it started in 2 of 2 runs (an "add" and a "fix" request). Two runs on one small fixture are an indication, not proof.
+- **Cost on a tiny project is higher, not lower.** Fix request: 12 turns, $0.43, 77 s with the skill; 6 turns, $0.29, 40 s without (same diff). The savings are designed for larger projects and are not yet measured (spec R15, R16).
+- The counting script runs as an ordinary shell command, so it asks for approval like any other (in a headless run with no allow rule it is denied and the agent counts by hand, which costs more).
 
 ## 1.0.5 (2026-11-25)
 
