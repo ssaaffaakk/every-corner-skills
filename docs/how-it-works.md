@@ -113,7 +113,7 @@ flowchart TD
 
 **Key choices (from the [research report](every-corner/research/matchcodebase-landscape.md)):**
 
-- **Count, don't read.** Reading every file in full is the most expensive way to learn style. A standard-library script covers every file in one pass (about 0.1 s for 1,000 files) and returns frequencies and outliers; the model reads in full only what counts cannot tell it.
+- **Count, don't read.** Reading every file in full is the most expensive way to learn style. A standard-library script covers every file in one pass (about 0.2 s for 1,000 files) and returns frequencies and outliers; the model reads in full only what counts cannot tell it.
 - **Configs win.** An explicit formatter or linter rule needs no note in `STYLE.md`.
 - **Short notes only.** In one study, context files did not improve task success and raised cost by over 20%, except for non-standard practices (Gloaguen et al., arXiv 2602.11988). So `STYLE.md` holds only conventions the tools don't show.
 - **Verify, don't trust.** Formatting is the easiest style signal to imitate, so after the formatter and linter the skill compares naming and structure with the nearest existing file.
@@ -166,11 +166,15 @@ every-corner-skills/
 │   ├── hooks.json          (registers the hook for plugin users)
 │   ├── explain-risky-commands.sh
 │   ├── test-hook.sh
+│   ├── require-style-study.sh   (the style guard)
+│   ├── test-style-guard.sh
 │   └── README.md
 ├── evals/                  (skill trigger tests for `claude plugin eval`)
+├── tests/matchcodebase/    (fixtures, script tests, headless run helper)
 ├── examples/
 │   ├── tour-example.md
 │   ├── interview-example.md
+│   ├── matchcodebase-example.md
 │   └── permission-explanations.md
 ├── docs/
 │   ├── how-it-works.md

@@ -8,7 +8,7 @@
   <a href="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml"><img src="https://github.com/ssaaffaakk/every-corner-skills/actions/workflows/test-hook.yml/badge.svg" alt="Tests"/></a>
   <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fssaaffaakk%2Fevery-corner-skills%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version&color=f59e0b" alt="Version"/>
   <img src="https://img.shields.io/badge/Claude_Code-plugin-D97757" alt="Claude Code plugin"/>
-  <img src="https://img.shields.io/badge/always--on_cost-~470_tokens-0f172a" alt="About 470 tokens always-on"/>
+  <img src="https://img.shields.io/badge/always--on_cost-~500_tokens-0f172a" alt="About 500 tokens always-on"/>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/ssaaffaakk/every-corner-skills?color=22c55e" alt="MIT license"/></a>
   <a href="https://github.com/ssaaffaakk/every-corner-skills/stargazers"><img src="https://img.shields.io/github/stars/ssaaffaakk/every-corner-skills?style=social" alt="GitHub stars"/></a>
 </p>
@@ -38,7 +38,7 @@ Inside Claude Code:
 /plugin install every-corner@every-corner-skills
 ```
 
-Start a new session. That's it: four skills and two small hooks, for about **470 tokens per session** until a skill is actually used.
+Start a new session. That's it: four skills and two small hooks, for about **500 tokens per session** until a skill is actually used.
 
 <details>
 <summary>Prefer the terminal, or copying files by hand?</summary>
@@ -143,7 +143,7 @@ Check this: Nobody else is working on this branch.
 
 > Let's follow what happens when someone opens a recipe page. Their browser asks for `/recipes/42`. The first stop is `src/server.js:12`, the front door… **The loop:** door → receptionist → desk → database → page. Almost every feature here follows it.
 
-Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md)
+Full examples: [tour](examples/tour-example.md) · [interview](examples/interview-example.md) · [explain](examples/permission-explanations.md) · [match](examples/matchcodebase-example.md)
 
 ## 🔧 How it works
 
@@ -165,7 +165,7 @@ The skills hand their notes to each other. The tour saves `docs/every-corner/TOU
 - **🗺️ Proves "every corner".** The tour lists every folder as explained, mentioned, or skipped and why. Nothing is skipped silently.
 - **🤫 Quiet unless it matters.** People stop reading warnings they see on every action, so safe actions get nothing and irreversible ones look different.
 - **🧪 Stress-tested to failure.** Two rounds of adversarial scenarios, run as real sessions against a simulated difficult user. Three failed on the first run (the skill never loaded); [every failure and fix is published](docs/stress-test.md), including what is still unverified.
-- **🪶 Light.** About 300 tokens per session until a skill runs. The tour is cached by commit, so it only re-reads what changed.
+- **🪶 Light.** About 500 tokens per session until a skill runs (the name and description of the four skills, about 2,000 characters at roughly 4 characters per token). The tour is cached by commit, so it only re-reads what changed.
 
 ## ❓ FAQ
 

@@ -14,6 +14,7 @@ import re
 import stat
 import subprocess
 import sys
+import time
 
 # Keep the extensions in sync with hooks/require-style-study.sh.
 LANGS = {
@@ -32,6 +33,7 @@ SKIP_NAME = re.compile(
     r"(\.min\.|\.lock$|-lock\.|package-lock|\.generated\.|_pb2|\.pb\.go$|\.d\.ts$|\.snap$)"
 )
 MAX_BYTES = 1000000
+BUDGET_SECONDS = 30   # stop reading files after this long and say so (a hostile repository must not stall the agent)
 # Pattern work (quotes, imports, declarations) backtracks badly on very long lines; real code lines are short.
 MAX_DECL_LINE = 400
 SHA = re.compile(r"^[0-9a-fA-F]{4,40}$")
@@ -49,8 +51,8 @@ FUNC = {
     "swift": r"\bfunc\s+([A-Za-z_]\w*)",
     "kotlin": r"\bfun\s+(?:<[^>]*>\s*)?(?:[\w.]+\.)?([A-Za-z_]\w*)",
     "shell": r"^\s*(?:function\s+)?([A-Za-z_]\w*)\s*\(\)",
-    "java": r"^\s*(?:public|private|protected|static|final|abstract|synchronized|\s)+[\w<>\[\],.? ]+\s+([a-z_]\w*)\s*\([^;]*$",
-    "csharp": r"^\s*(?:public|private|protected|internal|static|async|virtual|override|\s)+[\w<>\[\],.? ]+\s+([A-Za-z_]\w*)\s*\([^;]*$",
+    "java": r"^\s*(?:(?:public|private|protected|static|final|abstract|synchronized)\s+)+[\w.?\[\]]+(?:<[^<>;()]*>)?(?:\[\])*\s+([a-z_]\w*)\s*\([^;]*$",
+    "csharp": r"^\s*(?:(?:public|private|protected|internal|static|async|virtual|override)\s+)+[\w.?\[\]]+(?:<[^<>;()]*>)?(?:\[\])*\s+([A-Za-z_]\w*)\s*\([^;]*$",
     "dart": r"^\s*(?:static\s+)?[\w<>?]+\s+([a-z_]\w*)\s*\([^;]*\)\s*(?:async\s*)?\{",
     "scala": r"\bdef\s+([A-Za-z_]\w*)",
     "lua": r"\bfunction\s+(?:[\w.]+[.:])?([A-Za-z_]\w*)",
@@ -118,7 +120,7 @@ STMT_START = re.compile(r"(const|let|var|return|throw|await|break|continue|impor
                         r"|[\w$.\[\]]+\(|[\w$.\[\]]+\s*=[^=>])")
 PY_IMPORT = re.compile(r"(from\s+(\S+)\s+import|import\s+(\S+))")
 JS_IMPORT = re.compile(r"(import\s+.*?from\s+['\"](\S+)['\"]|import\s+['\"](\S+)['\"])")
-BLANK_RUN = re.compile(r"[ \t]{2,}")
+BLANK_RUN = re.compile(r"\s{2,}")   # every kind of whitespace: NBSP, form feed, U+2003 too
 COMPILED = {kind: {lang: re.compile(rx) for lang, rx in table.items()}
             for kind, table in (("func", FUNC), ("class", CLASS), ("const", CONST))}
 # Each idiom with the literal it cannot match without; a file that lacks the
@@ -178,13 +180,13 @@ def list_files(root, since):
         if since:
             # Against the working tree, plus untracked files: uncommitted work counts too.
             out = subprocess.run(GIT + ["-C", root, "diff", "--name-only", "-z", "--relative", since],
-                                 capture_output=True, text=True, check=True).stdout
+                                 capture_output=True, check=True).stdout.decode("utf-8", "surrogateescape")
             out += subprocess.run(GIT + ["-C", root, "ls-files", "--others", "--exclude-standard", "-z"],
-                                  capture_output=True, text=True, check=True).stdout
+                                  capture_output=True, check=True).stdout.decode("utf-8", "surrogateescape")
             files = sorted({f for f in out.split("\0") if f and os.path.exists(os.path.join(root, f))})
         else:
             out = subprocess.run(GIT + ["-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-                                 capture_output=True, text=True, check=True).stdout
+                                 capture_output=True, check=True).stdout.decode("utf-8", "surrogateescape")
             files = [f for f in out.split("\0") if f]
         return files, True
     except (subprocess.CalledProcessError, FileNotFoundError, OSError):
@@ -196,12 +198,12 @@ def list_files(root, since):
         return files, False
 
 
-def indent_unit(widths):
-    if not widths:
+def indent_unit(widths):  # widths: Counter of indent width -> number of lines
+    total = sum(widths.values())
+    if not total:
         return None
-    total = len(widths)
     for unit in (8, 4, 3, 2):
-        if sum(1 for w in widths if w % unit == 0) / total >= 0.95:
+        if sum(c for w, c in widths.items() if w % unit == 0) / total >= 0.95:
             return unit
     return 1
 
@@ -210,8 +212,8 @@ def analyze_file(lang, text):
     lines = text.split("\n")
     if lines and lines[-1] == "":
         lines = lines[:-1]
-    st = {"lines": len(lines), "tab_lines": 0, "space_widths": [], "dq": 0, "sq": 0, "bt": 0,
-          "semi": 0, "nosemi": 0, "lens": [], "trail_ws": 0, "comment": 0, "docstrings": 0,
+    st = {"lines": len(lines), "tab_lines": 0, "space_widths": collections.Counter(), "dq": 0, "sq": 0, "bt": 0,
+          "semi": 0, "nosemi": 0, "lens": collections.Counter(), "trail_ws": 0, "comment": 0, "docstrings": 0,
           "final_newline": text.endswith("\n"), "crlf": "\r\n" in text,
           "funcs": collections.Counter(), "classes": collections.Counter(),
           "consts": collections.Counter(), "idioms": collections.Counter(),
@@ -236,13 +238,13 @@ def analyze_file(lang, text):
             continue
         if raw != raw.rstrip():
             st["trail_ws"] += 1
-        st["lens"].append(len(raw))
+        st["lens"][len(raw)] += 1
         lead = raw[:len(raw) - len(raw.lstrip())]
         if lead:
             if lead[0] == "\t":
                 st["tab_lines"] += 1
             else:
-                st["space_widths"].append(len(lead))
+                st["space_widths"][len(lead)] += 1
         is_comment = s.startswith(cstart)
         if is_comment:
             st["comment"] += 1
@@ -338,7 +340,11 @@ def main():
     skipped = collections.Counter()
     folders = collections.Counter()
     per_lang = collections.defaultdict(list)
-    for rel in files:
+    started = time.monotonic()
+    for n, rel in enumerate(files):
+        if time.monotonic() - started > BUDGET_SECONDS:
+            skipped["not reached (%d s time budget)" % BUDGET_SECONDS] += len(files) - n
+            break
         parts = rel.split("/")
         folders[parts[0] if len(parts) > 1 else "."] += 1
         ext = os.path.splitext(rel)[1].lower()
@@ -374,12 +380,21 @@ def main():
         def tot(key):
             return sum(s[key] for s in sts)
         tot_lines, tab = tot("lines"), tot("tab_lines")
-        widths = [w for s in sts for w in s["space_widths"]]
-        indented = tab + len(widths)
+        widths = sum((s["space_widths"] for s in sts), collections.Counter())
+        n_space = sum(widths.values())
+        indented = tab + n_space
         unit = indent_unit(widths)
         dq, sq, bt = tot("dq"), tot("sq"), tot("bt")
-        lens = sorted(l for s in sts for l in s["lens"])
-        p95 = lens[int(0.95 * (len(lens) - 1))] if lens else 0
+        lens = sum((s["lens"] for s in sts), collections.Counter())
+        n_lens = sum(lens.values())
+        p95 = 0
+        if n_lens:
+            want, seen = int(0.95 * (n_lens - 1)), 0   # the same element a sorted list would give
+            for length in sorted(lens):
+                seen += lens[length]
+                if seen > want:
+                    p95 = length
+                    break
         funcs, classes, consts, idioms = (sum((s[k] for s in sts), collections.Counter())
                                           for k in ("funcs", "classes", "consts", "idioms"))
         ig, igs = tot("import_groups"), tot("import_groups_sorted")
@@ -389,7 +404,7 @@ def main():
         name_cases = collections.Counter(
             s["name_case"] for s in sts if s["name_case"] and not s["is_config_file"])
         tests = [s for s in sts if s["is_test"]]
-        dom_indent = "tabs" if tab > len(widths) else "spaces"
+        dom_indent = "tabs" if tab > n_space else "spaces"
         dom_func = dominant(funcs, 3)
         dom_quote = ("double" if dq >= sq else "single") if (dq + sq) >= 5 else None
         dom_name = dominant(name_cases, 3)
@@ -398,11 +413,12 @@ def main():
         scored = []
         for s in sts:
             flags = []
-            if s["tab_lines"] + len(s["space_widths"]) >= 5:
-                f_tab = s["tab_lines"] > len(s["space_widths"])
+            s_space = sum(s["space_widths"].values())
+            if s["tab_lines"] + s_space >= 5:
+                f_tab = s["tab_lines"] > s_space
                 if f_tab != (dom_indent == "tabs"):
                     flags.append("indent " + ("tabs" if f_tab else "spaces"))
-                elif not f_tab and unit and unit > 1 and len(s["space_widths"]) >= 20:
+                elif not f_tab and unit and unit > 1 and s_space >= 20:
                     fu = indent_unit(s["space_widths"])
                     if fu > 1 and fu != unit:
                         flags.append("indent width %d" % fu)
@@ -439,7 +455,7 @@ def main():
             "indent": {"dominant": dom_indent, "tab_pct": pct(tab, indented), "unit": unit},
             "quotes": {"double": dq, "single": sq, "backtick": bt, "dominant": dom_quote},
             "semicolons": ({"yes": semi, "no": nosemi} if lang in ("javascript", "typescript") else None),
-            "line_length": {"p95": p95, "max": lens[-1] if lens else 0},
+            "line_length": {"p95": p95, "max": max(lens) if lens else 0},
             "functions": dict(funcs), "classes": dict(classes), "constants": dict(consts),
             "file_names": dict(name_cases),
             "comment_line_pct": pct(tot("comment"), tot_lines),
@@ -463,10 +479,12 @@ def main():
     if body:
         try:
             scripts = json.loads(body).get("scripts", {})
+            if not isinstance(scripts, dict):
+                scripts = {}
             for k in ("lint", "format", "fmt", "test", "typecheck", "check"):
                 if k in scripts:
                     tools["commands"][k] = "npm run " + k
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError, TypeError, RecursionError):
             pass
     body, _ = read_regular(os.path.join(root, "pyproject.toml"), MAX_BYTES, errors="ignore")
     if body:

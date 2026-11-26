@@ -71,6 +71,7 @@ case "${file##*.}" in
   py|js|jsx|mjs|cjs|ts|tsx|go|rs|java|kt|rb|php|c|h|cpp|cc|hpp|cs|swift|sh|scala|dart|lua) ;;
   *) exit 0 ;;
 esac
+shopt -u nocasematch
 case "$file" in /*) ;; *) exit 0 ;; esac   # Claude Code sends absolute paths
 case "$file" in */../*|*/..) exit 0 ;; esac   # not normalised: cannot tell where it points
 [ -e "$guard/$session" ] && exit 0
@@ -118,7 +119,9 @@ if [ "$in_git" = 1 ]; then
 else
   list="$(cd "$root" && find . -maxdepth 4 \( -name node_modules -o -name .git -o -name vendor \) -prune -o -type f -print 2>/dev/null | sed 's#^\./##')"
 fi
-has_code="$(printf '%s\n' "$list" | grep -iE "$src_re" | grep -vxF -- "$rel" | grep -vE "$skip_re" | head -1)"
+# Generated, minified and lock files do not count either (keep in sync with SKIP_NAME in the script).
+gen_re='(\.min\.|\.lock$|-lock\.|package-lock|\.generated\.|_pb2|\.pb\.go$|\.d\.ts$|\.snap$)'
+has_code="$(printf '%s\n' "$list" | grep -iE "$src_re" | grep -vxF -- "$rel" | grep -vE "$skip_re" | grep -vE "$gen_re" | head -1)"
 [ -n "$has_code" ] || exit 0
 
 # Block only if the mark could be written; otherwise every edit of the session

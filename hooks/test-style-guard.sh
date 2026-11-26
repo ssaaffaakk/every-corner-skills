@@ -144,6 +144,23 @@ check block "upper-case extension is a source file" "$T/up/A.PY" s19
 check pass "a path with .. is not normalised, so it is ignored" "$T/up/nope/../../outside.py" s20
 check block "Claude Code started in a parent folder of several projects" "$T/up/b.py" s21 EVERY_CORNER_NOOP=1 "$T"
 
+# Round 2: the git hardening is tested where it matters (cwd is NOT the repository), and more cases.
+mkdir -p "$T/parent"; mkbare "$T/parent/h1" "$T/PWNED2"
+check block "bare-shaped folder under a non-git parent folder is still guarded" "$T/parent/h1/src/app.py" s22 EVERY_CORNER_NOOP=1 "$T/parent"
+expect_absent "planted git config never runs from a parent folder" "$T/PWNED2"
+mkdir -p "$T/many/solo" "$T/many/other" && ( cd "$T/many/solo" && git init -q && printf 'x = 1\n' > only.py && git add -A && git commit -qm i )
+printf 'a = 1\n' > "$T/many/other/a.py"; printf 'b = 1\n' > "$T/many/other/b.py"
+check pass "parent folder: a repository with one source file is judged on its own" "$T/many/solo/only.py" s23 EVERY_CORNER_NOOP=1 "$T/many"
+mkdir -p "$T/gen" && ( cd "$T/gen" && git init -q && printf 'x = 1\n' > app.min.js && printf 'y = 1\n' > types.d.ts && printf 'z = 1\n' > a_pb2.py && git add -A && git commit -qm i )
+check pass "only minified and generated files: nothing to match" "$T/gen/main.py" s24
+mkdir -p "$T/sk" && ( cd "$T/sk" && git init -q && printf 'x = 1\n' > a.py && printf 'y = 1\n' > b.py && git add -A && git commit -qm i )
+run_case pass "the Skill call without a plugin prefix marks the session too" EVERY_CORNER_NOOP=1 \
+  "{\"tool_name\":\"Skill\",\"session_id\":\"sk2-@P@\",\"cwd\":\"$T/sk\",\"tool_input\":{\"skill\":\"every-corner-matchcodebase\"}}"
+check pass "...so the first edit afterwards is not blocked" "$T/sk/a.py" sk2
+run_case pass "another skill does not mark the session" EVERY_CORNER_NOOP=1 \
+  "{\"tool_name\":\"Skill\",\"session_id\":\"sk3-@P@\",\"cwd\":\"$T/sk\",\"tool_input\":{\"skill\":\"every-corner-tour\"}}"
+check block "...so the first edit afterwards is still blocked" "$T/sk/a.py" sk3
+
 # 5. Bad input must never error or block.
 run_case pass "malformed input is ignored" EVERY_CORNER_NOOP=1 'not json'
 run_case pass "a relative path is ignored" EVERY_CORNER_NOOP=1 "{\"session_id\":\"rel-@P@\",\"cwd\":\"$T/p1\",\"tool_input\":{\"file_path\":\"app/orders.py\"}}"

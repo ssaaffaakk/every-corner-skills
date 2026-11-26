@@ -40,7 +40,7 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 | ID | Requirement | Done check |
 |---|---|---|
 | R1 | When the agent is about to write or edit code in a project that already has source files, the skill shall load before any code is written. | Fixture with a clearly different style, prompt "add X": skill is the first action. Empty folder: skill not loaded. |
-| R19 | A plugin hook shall block the first Edit, Write or MultiEdit of a source file once per session when the project has other source code and no `STYLE.md`, and shall never block in an empty project, for non-source files, after `STYLE.md` exists, or when switched off. | `hooks/test-style-guard.sh` (14 cases, each with and without jq) and two headless runs. |
+| R19 | A plugin hook shall block the first Edit, Write or MultiEdit of a source file once per session when the project has other source code and no `STYLE.md`, and shall never block in an empty project, for non-source files, or when switched off. When `STYLE.md` exists it blocks once with the reuse message, and it never blocks after the skill itself ran. | `hooks/test-style-guard.sh` (each case with and without jq) and headless runs. |
 | R2 | The skill shall list every file, mark generated, vendored, lockfile, binary and media files as Skipped with a reason, and cover every other source file with a counting script that prints style frequencies (naming, quoting, imports, line length, comments, error handling, logging, test layout) and outliers, not code. It shall then read in full: the config files, the area being touched, one or two example files per kind of file, and the outliers the script flagged. (Changed from reading every source file in full after the research report; approved by the user.) | `STYLE.md` ledger has one row per folder; the script's file count equals the source file count; every file read in full is listed with its reason. |
 | R3 | The skill shall read only to learn usage: call sites, tests, README and change history. It shall not run, install or start anything while studying. | Tool-call log of the study phase has no run, install or start commands. |
 | R4 | The skill shall write `docs/every-corner/STYLE.md` with style rules (naming, layout, imports, formatting, comments, error handling, logging, tests, commit messages), each backed by a short verbatim excerpt cited as `file:line` with the full path. It shall hold only conventions the configs and counts do not already show, no repository overview, and stay under about 150 lines (Defaulted). | Script checks every cited line exists and the excerpt matches. |
@@ -126,8 +126,8 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 | ID | Result | Note |
 |---|---|---|
 | R1 | Met (2 runs) | Without the hook: not invoked in 2 of 2 runs. With the style guard hook: invoked in 2 of 2 runs ("add a function", "fix a file-handle leak"); order was Read, Edit blocked once, Skill, script, `STYLE.md`, Edit. Empty-folder case covered by the hook tests, not by a headless run. |
-| R19 | Met | 28 hook checks pass (14 cases x 2 parsers), also under macOS bash 3.2; the existing hook tests (423 checks after merging main) still pass; `claude plugin validate --strict .` passes; real runs t5 and t6 started the skill. |
-| R2 | Met | `scripts/style-counts.py`; 17 checks in `tests/matchcodebase/test-style-counts.sh`; file counts add up; output has no code; 1,000 files in 0.12 s. Heuristic outliers; JS/TS semicolon detection is approximate. |
+| R19 | Met | 82 hook checks pass (each case with and without jq), also under macOS bash 3.2; the existing hook tests (423 checks after merging main) still pass; `claude plugin validate --strict .` passes; real runs t5 and t6 started the skill. |
+| R2 | Met | `scripts/style-counts.py`; 35 checks in `tests/matchcodebase/test-style-counts.sh`; file counts add up; output has no code; 1,000 files in about 0.2 s. Heuristic outliers; JS/TS semicolon detection is approximate. |
 | R3 | Met (one run) | Run t4: only `ls`, `git ls-files`, the script, `cat`/Read and `git log`/`grep` before the first write; `make lint` and `make test` ran only after the edit. |
 | R4 | Met (one run) | `STYLE.md` written with 10 citations; all 10 resolve to real lines. Under the size cap. |
 | R5 | Not tested | Fixture has one older-style file; the agent labelled it legacy. No mixed-area test yet. |
@@ -138,7 +138,7 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 | R10 | Met (one run) | Run t2 listed the missing `__init__`, unused imports and an unclosed file under "Defects seen" and copied none. |
 | R11 | Not tested | |
 | R12 | Met | One helper agent per folder is in Step 3; with the script, size no longer forces a full read (1,000-file check). |
-| R13 | Met | Skill, manifests (1.1.0), changelog, README, how-it-works, example, CI step; front matter valid; hook tests 34/34. |
+| R13 | Met | Skill, manifests (1.1.0), changelog, README, how-it-works, example, CI step; front matter valid; hook tests 82/82. |
 | R14 | Met | `SKILL.md` is 105 lines, about 1,800 tokens by chars/4. |
 | R15 | Partly | `tests/matchcodebase/run-session.sh` runs paired with/without sessions and prints cost and tokens. Only single runs so far. |
 | R16 | Not yet | One fixture cannot show a win: the neighbor function already shows the style, so the no-skill run matched it too. Needs harder fixtures. |

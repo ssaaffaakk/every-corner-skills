@@ -78,7 +78,7 @@ python3 -I $S "$H" --json > "$TMP/h.json" 2>/dev/null
 check "FIFO and symlink are skipped, not read"     "d['skipped'].get('symlink or special file')==2" "$TMP/h.json"
 ( cd "$H" && git init -q && git add src/ok.py && git commit -qm i )
 python3 -I $S "$H" "--since=--output=$TMP/pwned" >/dev/null 2>&1
-if [ -e "$TMP/pwned..HEAD" ]; then fail=$((fail+1)); echo "FAIL --since passed an option to git"
+if [ -e "$TMP/pwned" ] || [ -e "$TMP/pwned..HEAD" ]; then fail=$((fail+1)); echo "FAIL --since passed an option to git"
 else pass=$((pass+1)); echo "PASS --since accepts only a commit hash"; fi
 
 ( cd "$H" && printf 'y = 2\n' > src/new_untracked.py && printf 'x = 3\n' > src/ok.py )
@@ -95,14 +95,69 @@ open(d + '/b.py', 'w').write('x = ' + '\"\\\\' * 100000 + '\n')
 open(d + '/c.js', 'w').write('import ' + 'a ' * 100000 + '\n')" "$TMP/slow"
 timed "blank-line, quote-backslash and import-heavy files finish" 10 python3 -I $S "$TMP/slow"
 
+# Lines under the 400-character cap that mix spaces with other whitespace (NBSP, VT, FF, U+2003).
+mkdir -p "$TMP/uni"
+python3 -I -c "
+import sys; d = sys.argv[1]
+for ext in ('java', 'cs', 'c', 'js'):
+    for n, ws in enumerate(('\xa0', '\x0b', '\x0c', '\u2003')):
+        open('%s/f%d.%s' % (d, n, ext), 'w', encoding='utf-8').write(((' ' + ws) * 190 + ' x\n') * 300)" "$TMP/uni"
+timed "Unicode whitespace in Java, C#, C and JS files finishes" 10 python3 -I $S "$TMP/uni"
+
+# One file full of repeated keywords just under the line cap.
+mkdir -p "$TMP/kw"
+python3 -I -c "
+import sys; d = sys.argv[1]
+open(d + '/A.java', 'w').write(('final ' * 66 + '\n') * 2400)
+open(d + '/B.cs', 'w').write(('async ' * 66 + '\n') * 2400)" "$TMP/kw"
+timed "399-character keyword lines in Java and C# finish quickly" 2.5 python3 -I $S "$TMP/kw"
+
+# CRLF repositories: the per-file check used to be quadratic (10,000 files took 3.6 s, now about 0.5 s).
+mkdir -p "$TMP/crlf"
+python3 -I -c "
+import sys
+for i in range(10000):
+    open('%s/m%d.py' % (sys.argv[1], i), 'w', newline='').write('def f(x):\r\n    return x\r\n')" "$TMP/crlf"
+timed "10,000 CRLF files finish quickly" 2.5 python3 -I $S "$TMP/crlf"
+
+# Odd tooling files and file names that are not UTF-8 must not crash the report.
+mkdir -p "$TMP/odd"
+printf '{"scripts": null}' > "$TMP/odd/package.json"; printf 'x = 1\n' > "$TMP/odd/a.py"
+timed "package.json with scripts null does not crash" 10 python3 -I $S "$TMP/odd"
+python3 -I -c "open('$TMP/odd/package.json', 'w').write('[' * 100000)"
+timed "deeply nested package.json does not crash" 10 python3 -I $S "$TMP/odd"
+mkdir -p "$TMP/badname" && ( cd "$TMP/badname" && git init -q && printf 'x = 1\n' > a.py && git add -A && git commit -qm i \
+  && git update-index --add --cacheinfo "100644,$(printf 'x = 1\n' | git hash-object -w --stdin),$(printf '\377\376.py')" )
+timed "a git file name that is not UTF-8 does not crash" 10 python3 -I $S "$TMP/badname"
+
+# The hook and the script must agree on what counts as source code.
+if python3 -I - hooks/require-style-study.sh $S <<'SYNC'
+import re, sys
+hook, script = (open(p, encoding="utf-8").read() for p in sys.argv[1:3])
+h_ext = set(re.search(r'case "\$\{file##\*\.\}" in\n\s+([\w|]+)\) ;;', hook).group(1).split("|"))
+s_ext = set(re.findall(r'"\.(\w+)":', re.search(r"LANGS = \{(.*?)\n\}", script, re.S).group(1)))
+h_skip = set(re.search(r"skip_re='\(\^\|/\)\((.*?)\)/'", hook).group(1).replace("\\.", ".").split("|"))
+s_skip = set(re.findall(r'"([^"]+)"', re.search(r"SKIP_DIRS = \{(.*?)\}", script, re.S).group(1)))
+h_gen = re.search(r"gen_re='(.*?)'\n", hook).group(1)
+s_gen = re.search(r'SKIP_NAME = re\.compile\(\s*r"(.*?)"\s*\)', script, re.S).group(1)
+ok = h_ext == s_ext and h_skip == s_skip and h_gen == s_gen
+if not ok:
+    print("extensions only in hook:", h_ext - s_ext, "only in script:", s_ext - h_ext)
+    print("skip dirs only in hook:", h_skip - s_skip, "only in script:", s_skip - h_skip)
+    print("generated-file patterns equal:", h_gen == s_gen)
+sys.exit(0 if ok else 1)
+SYNC
+then pass=$((pass+1)); echo "PASS hook and script agree on source extensions, vendored folders and generated files"
+else fail=$((fail+1)); echo "FAIL hook and script disagree on what counts as source code"; fi
+
 # --since: non-ASCII names, and a root that is a subfolder of the repository.
 G="$TMP/since"; mkdir -p "$G/pkg/çalışma" && ( cd "$G" && git init -q && printf 'x = 1\n' > pkg/çalışma/a.py && git add -A && git commit -qm i )
-( cd "$G" && printf 'y = 1\n' > pkg/çalışma/new.py && printf 'z = 1\n' > pkg/plain.py && printf 'o = 1\n' > outside.py )
+( cd "$G" && printf 'y = 1\n' > pkg/çalışma/new.py && printf 'z = 1\n' > pkg/plain.py && printf 'o = 1\n' > outside.py && echo '# edit' >> pkg/çalışma/a.py )
 stamp=$(git -C "$G" log -1 --format=%h)
 python3 -I $S "$G" --since "$stamp" --json > "$TMP/s1.json"
 python3 -I $S "$G/pkg" --since "$stamp" --json > "$TMP/s2.json"
-check "--since lists non-ASCII and untracked files"  "d['files_listed']==3" "$TMP/s1.json"
-check "--since from a subfolder root lists only that folder" "d['files_listed']==2" "$TMP/s2.json"
+check "--since lists modified, non-ASCII and untracked files"  "d['files_listed']==4" "$TMP/s1.json"
+check "--since from a subfolder root lists only that folder, including a modified tracked file" "d['files_listed']==3" "$TMP/s2.json"
 if python3 -I $S "$TMP/no-such-folder" >/dev/null 2>&1; then fail=$((fail+1)); echo "FAIL a missing folder was accepted"
 else pass=$((pass+1)); echo "PASS a missing folder stops with an error"; fi
 
