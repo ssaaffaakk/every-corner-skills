@@ -33,6 +33,7 @@ SKIP_NAME = re.compile(
     r"(\.min\.|\.lock$|-lock\.|package-lock|\.generated\.|_pb2|\.pb\.go$|\.d\.ts$|\.snap$)"
 )
 MAX_BYTES = 1000000
+MAX_PACKAGE_JSON = 200000   # json.loads of a huge number is slow; real package.json files are a few KB
 BUDGET_SECONDS = 30   # stop reading files after this long and say so (a hostile repository must not stall the agent)
 # Pattern work (quotes, imports, declarations) backtracks badly on very long lines; real code lines are short.
 MAX_DECL_LINE = 400
@@ -330,6 +331,9 @@ def main():
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
     ap.add_argument("--budget", type=float, default=BUDGET_SECONDS, help="stop reading files after this many seconds")
     a = ap.parse_args()
+    # File names are data from the repository: whatever the terminal encoding, print what cannot be
+    # shown as an escape instead of crashing (the guarantee of --json, which is always ASCII).
+    sys.stdout.reconfigure(errors="backslashreplace")
     root = os.path.abspath(a.root)
     if not os.path.isdir(root):
         ap.error("%s is not a folder" % a.root)
@@ -478,7 +482,7 @@ def main():
     # tooling
     present = [c for c in CONFIG_FILES if os.path.exists(os.path.join(root, c))]
     tools = {"configs": present, "commands": {}}
-    body, _ = read_regular(os.path.join(root, "package.json"), MAX_BYTES)
+    body, _ = read_regular(os.path.join(root, "package.json"), MAX_PACKAGE_JSON)
     if body:
         try:
             scripts = json.loads(body).get("scripts", {})

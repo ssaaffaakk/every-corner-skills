@@ -113,12 +113,23 @@ open(d + '/B.cs', 'w').write(('async ' * 66 + '\n') * 2400)" "$TMP/kw"
 timed "399-character keyword lines in Java and C# finish quickly" 2.5 python3 -I $S "$TMP/kw"
 
 # CRLF repositories: the per-file check used to be quadratic (10,000 files took 3.6 s, now about 0.5 s).
-mkdir -p "$TMP/crlf"
+mkdir -p "$TMP/crlf" "$TMP/lf"
 python3 -I -c "
 import sys
 for i in range(10000):
-    open('%s/m%d.py' % (sys.argv[1], i), 'w', newline='').write('def f(x):\r\n    return x\r\n')" "$TMP/crlf"
-timed "10,000 CRLF files finish quickly" 2.5 python3 -I $S "$TMP/crlf"
+    open('%s/crlf/m%d.py' % (sys.argv[1], i), 'w', newline='').write('def f(x):\r\n    return x\r\n')
+    open('%s/lf/m%d.py' % (sys.argv[1], i), 'w', newline='').write('def f(x):\n    return x\n')" "$TMP"
+# Same size, so a loaded machine slows both alike: CRLF must not cost much more than LF (it was 7x).
+if python3 -I - $S "$TMP/crlf" "$TMP/lf" <<'RATIO'
+import subprocess, sys, time
+script, crlf, lf = sys.argv[1:4]
+def took(folder):
+    t = time.monotonic(); subprocess.run([sys.executable, "-I", script, folder], capture_output=True, timeout=120); return time.monotonic() - t
+a, b = took(crlf), took(lf)
+sys.exit(0 if a < 3 * b + 0.5 else 1)
+RATIO
+then pass=$((pass+1)); echo "PASS 10,000 CRLF files cost about the same as 10,000 LF files"
+else fail=$((fail+1)); echo "FAIL 10,000 CRLF files are much slower than LF files"; fi
 
 # Odd tooling files and file names that are not UTF-8 must not crash the report.
 mkdir -p "$TMP/odd"
@@ -170,6 +181,22 @@ for loc in en_US.UTF-8 C.UTF-8 C; do
 done
 if python3 -I $S "$TMP/names" | grep -q '^FORGED LINE'; then fail=$((fail+1)); echo "FAIL a file name forged a line of the report"
 else pass=$((pass+1)); echo "PASS a file name cannot forge a line of the report"; fi
+
+# The terminal's encoding can be anything: a name it cannot show is escaped, never a traceback.
+mkdir -p "$TMP/enc" && printf 'x = 1\n' > "$TMP/enc/日本é.py"
+if python3 -I -c "
+import runpy, sys
+sys.stdout.reconfigure(encoding='ascii')
+sys.argv = ['style-counts.py', sys.argv[1]]
+runpy.run_path(sys.argv[0] if False else '$S', run_name='__main__')" "$TMP/enc" > "$TMP/enc.out" 2>&1; then
+  pass=$((pass+1)); echo "PASS text report on an ASCII-only terminal"
+else fail=$((fail+1)); echo "FAIL text report crashed on an ASCII-only terminal"; tail -2 "$TMP/enc.out"; fi
+
+# core.fsmonitor set in the repository's own config must not run (git ls-files would run it).
+mkdir -p "$TMP/fsm" && ( cd "$TMP/fsm" && git init -q && printf 'x = 1\n' > a.py && git add -A && git commit -qm i && git config core.fsmonitor "touch $TMP/FSMON; false" )
+python3 -I $S "$TMP/fsm" --json >/dev/null 2>&1
+if [ -e "$TMP/FSMON" ]; then fail=$((fail+1)); echo "FAIL core.fsmonitor from the repository config ran"
+else pass=$((pass+1)); echo "PASS core.fsmonitor from the repository config never runs"; fi
 
 # --since: a file named like the commit must not make git fail (and fall back to a full count).
 H2="$TMP/ambig"; mkdir -p "$H2" && ( cd "$H2" && git init -q && printf 'x = 1\n' > a.py && git add -A && git commit -qm one \

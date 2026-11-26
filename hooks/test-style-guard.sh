@@ -180,6 +180,16 @@ for p in $parsers; do
   esac
 done
 
+# Round 4: a repository's own core.fsmonitor must not run; the non-git search reaches four folders deep.
+mkdir -p "$T/fsm" && ( cd "$T/fsm" && git init -q && printf 'x = 1\n' > a.py && printf 'y = 1\n' > b.py && git add -A && git commit -qm i \
+  && git config core.fsmonitor "touch $T/FSMON; false" )
+check block "a project whose config sets core.fsmonitor is still guarded" "$T/fsm/new.py" s26
+expect_absent "core.fsmonitor from the repository config never runs" "$T/FSMON"
+mkdir -p "$T/deep4/d1/d2/d3/d4" "$T/deep5/d1/d2/d3/d4/d5"
+printf 'x = 1\n' > "$T/deep4/d1/d2/d3/d4/a.py"; printf 'x = 1\n' > "$T/deep5/d1/d2/d3/d4/d5/a.py"
+check block "no git: code four folders deep counts" "$T/deep4/new.py" s27
+check pass  "no git: code five folders deep is not searched for" "$T/deep5/new.py" s28
+
 # 5. Bad input must never error or block.
 run_case pass "malformed input is ignored" EVERY_CORNER_NOOP=1 'not json'
 run_case pass "a relative path is ignored" EVERY_CORNER_NOOP=1 "{\"session_id\":\"rel-@P@\",\"cwd\":\"$T/p1\",\"tool_input\":{\"file_path\":\"app/orders.py\"}}"

@@ -115,7 +115,7 @@ rel="${file#"$root"/}"
 if [ "$in_git" = 1 ]; then
   list="$(g -C "$root" ls-files --cached --others --exclude-standard 2>/dev/null)"
 else
-  list="$(cd "$root" && find . -maxdepth 4 \( -name node_modules -o -name .git -o -name vendor \) -prune -o -type f -print 2>/dev/null | sed 's#^\./##')"
+  list="$(cd "$root" && find . -maxdepth 5 \( -name node_modules -o -name .git -o -name vendor \) -prune -o -type f -print 2>/dev/null | head -50000 | sed 's#^\./##')"
 fi
 # Generated, minified and lock files do not count either (keep in sync with SKIP_NAME in the script).
 gen_re='(\.min\.|\.lock$|-lock\.|package-lock|\.generated\.|_pb2|\.pb\.go$|\.d\.ts$|\.snap$)'
