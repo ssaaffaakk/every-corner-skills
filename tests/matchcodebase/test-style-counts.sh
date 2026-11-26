@@ -2,7 +2,7 @@
 # Checks that style-counts.py reports what the fixtures were built to show.
 # Run from the repository root: ./tests/matchcodebase/test-style-counts.sh
 set -u
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../.." || exit 1
 S=skills/every-corner-matchcodebase/scripts/style-counts.py
 F=tests/matchcodebase/fixtures
 pass=0; fail=0

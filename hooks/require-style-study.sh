@@ -50,7 +50,8 @@ session="$(printf '%s' "$session" | tr -cd 'A-Za-z0-9_-')"   # names a file belo
 # when Claude Code provides one, otherwise in a folder only this user owns.
 guard="${CLAUDE_PLUGIN_DATA:-${TMPDIR:-/tmp}}/every-corner-style-guard"
 mark() { # -> 0 only if this session's mark now exists
-  mkdir -p -m 700 "$guard" 2>/dev/null && [ -O "$guard" ] && [ ! -L "$guard" ] || return 1
+  [ -d "$guard" ] || { mkdir -p "${guard%/*}" && mkdir -m 700 "$guard"; } 2>/dev/null
+  [ -d "$guard" ] && [ -O "$guard" ] && [ ! -L "$guard" ] || return 1
   find "$guard" -type f -mtime +7 -delete 2>/dev/null   # old sessions
   : > "$guard/$session" 2>/dev/null
 }
