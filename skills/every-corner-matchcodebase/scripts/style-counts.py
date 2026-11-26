@@ -15,6 +15,7 @@ import stat
 import subprocess
 import sys
 
+# Keep the extensions in sync with hooks/require-style-study.sh.
 LANGS = {
     ".py": "python", ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript",
     ".cjs": "javascript", ".ts": "typescript", ".tsx": "typescript", ".go": "go",
@@ -36,8 +37,7 @@ MAX_DECL_LINE = 400
 SHA = re.compile(r"^[0-9a-fA-F]{4,40}$")
 # Never let the repository's own files configure git: a committed folder shaped
 # like a bare repository would otherwise be opened and its core.fsmonitor run.
-GIT = ["git", "-c", "safe.bareRepository=explicit", "-c", "core.fsmonitor=false",
-       "-c", "core.hooksPath=/dev/null"]
+GIT = ["git", "-c", "safe.bareRepository=explicit", "-c", "core.fsmonitor=false"]
 
 FUNC = {
     "python": r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)",
@@ -109,6 +109,40 @@ IDIOMS = {
     },
 }
 IDIOMS["typescript"] = IDIOMS["javascript"]
+# Per-line patterns, compiled once (they run on every line of every file).
+LINE_COMMENT = re.compile(r"//.*$")
+DQ = re.compile(r'"(?:[^"\\]|\\.)*"')
+SQ = re.compile(r"'(?:[^'\\]|\\.)*'")
+ENDS_LIKE_STMT = re.compile(r"[\w)\]'\"`]$")
+STMT_START = re.compile(r"(const|let|var|return|throw|await|break|continue|import|export\s+(const|default|let)"
+                        r"|[\w$.\[\]]+\(|[\w$.\[\]]+\s*=[^=>])")
+PY_IMPORT = re.compile(r"(from\s+(\S+)\s+import|import\s+(\S+))")
+JS_IMPORT = re.compile(r"(import\s+.*?from\s+['\"](\S+)['\"]|import\s+['\"](\S+)['\"])")
+BLANK_RUN = re.compile(r"[ \t]{2,}")
+COMPILED = {kind: {lang: re.compile(rx) for lang, rx in table.items()}
+            for kind, table in (("func", FUNC), ("class", CLASS), ("const", CONST))}
+# Each idiom with the literal it cannot match without; a file that lacks the
+# literal skips that whole-text scan (patterns starting with \b are slow).
+IDIOM_RX = {lang: [(k, re.compile(rx, re.M), re.match(r"(?:\\b)?([A-Za-z_]{3,})", rx))
+                   for k, rx in table.items()] for lang, table in IDIOMS.items()}
+IDIOM_RX = {lang: [(k, rx, m.group(1) if m else None) for k, rx, m in items] for lang, items in IDIOM_RX.items()}
+
+
+def read_regular(path, max_bytes, errors="strict"):
+    """Text of a plain file, or (None, reason). Never follows a symlink and never
+    opens a named pipe: a hostile repository can contain both (outside paths, hangs)."""
+    try:
+        info = os.lstat(path)
+        if not stat.S_ISREG(info.st_mode):
+            return None, "symlink or special file"
+        if info.st_size > max_bytes:
+            return None, "over 1 MB"
+        with open(path, "r", encoding="utf-8", errors=errors, newline="") as fh:
+            return fh.read(), None
+    except (OSError, UnicodeDecodeError):
+        return None, "unreadable/binary"
+
+
 TEST_RE = re.compile(r"(^|/)(tests?|__tests__|spec)/|(^|/)test_[^/]+$|_test\.\w+$|\.(test|spec)\.\w+$")
 CONFIG_FILES = [
     ".editorconfig", ".prettierrc", ".prettierrc.json", ".prettierrc.js", "prettier.config.js",
@@ -172,7 +206,7 @@ def indent_unit(widths):
     return 1
 
 
-def analyze_file(path, lang, text):
+def analyze_file(lang, text):
     lines = text.split("\n")
     if lines and lines[-1] == "":
         lines = lines[:-1]
@@ -183,10 +217,7 @@ def analyze_file(path, lang, text):
           "consts": collections.Counter(), "idioms": collections.Counter(),
           "import_groups": 0, "import_groups_sorted": 0, "rel_imports": 0, "abs_imports": 0}
     cstart = COMMENT_START.get(lang, ("//", "/*", "*", "#" if lang == "php" else "//"))
-    fre = re.compile(FUNC[lang]) if lang in FUNC else None
-    cre = re.compile(CLASS[lang]) if lang in CLASS else None
-    kre = re.compile(CONST[lang]) if lang in CONST else None
-    idi = {k: re.compile(v, re.M) for k, v in IDIOMS.get(lang, {}).items()}
+    fre, cre, kre = (COMPILED[kind].get(lang) for kind in ("func", "class", "const"))
     group = []
 
     def flush_group():
@@ -216,9 +247,9 @@ def analyze_file(path, lang, text):
         if is_comment:
             st["comment"] += 1
         elif lang in ("python", "ruby", "javascript", "typescript", "php"):
-            code = re.sub(r"//.*$", "", s) if lang != "python" and lang != "ruby" else s
-            st["dq"] += len(re.findall(r'"(?:[^"\\]|\\.)*"', code))
-            st["sq"] += len(re.findall(r"'(?:[^'\\]|\\.)*'", code))
+            code = LINE_COMMENT.sub("", s) if lang not in ("python", "ruby") else s
+            st["dq"] += len(DQ.findall(code))
+            st["sq"] += len(SQ.findall(code))
             if lang in ("javascript", "typescript"):
                 st["bt"] += code.count("`") // 2
         if lang == "python" and (s.startswith('"""') or s.startswith("'''")):
@@ -226,14 +257,12 @@ def analyze_file(path, lang, text):
         if lang in ("javascript", "typescript") and not is_comment:
             if s.endswith(";"):
                 st["semi"] += 1
-            elif re.search(r"[\w)\]'\"`]$", s) and re.match(
-                    r"(const|let|var|return|throw|await|break|continue|import|export\s+(const|default|let)"
-                    r"|[\w$.\[\]]+\(|[\w$.\[\]]+\s*=[^=>])", s):
+            elif ENDS_LIKE_STMT.search(s) and STMT_START.match(s):
                 st["nosemi"] += 1
         if lang == "python":
-            m = re.match(r"(from\s+(\S+)\s+import|import\s+(\S+))", raw)
+            m = PY_IMPORT.match(raw)
         elif lang in ("javascript", "typescript"):
-            m = re.match(r"(import\s+.*?from\s+['\"](\S+)['\"]|import\s+['\"](\S+)['\"])", raw)
+            m = JS_IMPORT.match(raw)
         else:
             m = None
         if m:
@@ -246,38 +275,36 @@ def analyze_file(path, lang, text):
         else:
             flush_group()
         if not is_comment and len(raw) <= MAX_DECL_LINE:
-            raw = re.sub(r"[ \t]{2,}", " ", raw)  # collapse runs: the patterns only need words
+            decl = BLANK_RUN.sub(" ", raw)  # collapse runs: the patterns only need words
             if fre:
-                fm = fre.search(raw)
+                fm = fre.search(decl)
                 if fm:
                     name = next((g for g in fm.groups() if g), None)
                     c = case_of(name) if name else None
                     if c:
                         st["funcs"][c] += 1
             if cre:
-                cm = cre.search(raw)
+                cm = cre.search(decl)
                 if cm:
                     c = case_of(cm.group(1))
                     if c:
                         st["classes"][c] += 1
             if kre:
-                km = kre.search(raw)
+                km = kre.search(decl)
                 if km:
                     st["consts"][case_of(km.group(1)) or "UPPER_SNAKE"] += 1
     flush_group()
-    for k, rx in idi.items():
+    for k, rx, hint in IDIOM_RX.get(lang, ()):
+        if hint and hint not in text:
+            continue
         n = len(rx.findall(text))
         if n:
             st["idioms"][k] += n
     return st
 
 
-def dominant(counter, minimum=1):
-    total = sum(counter.values())
-    if total < minimum:
-        return None
-    name, n = counter.most_common(1)[0]
-    return name
+def dominant(counter, minimum):
+    return counter.most_common(1)[0][0] if sum(counter.values()) >= minimum else None
 
 
 def pct(n, total):
@@ -294,6 +321,9 @@ def main():
     root = os.path.abspath(a.root)
     if a.since and not SHA.match(a.since):
         ap.error("--since must be a commit hash (4-40 hex characters), got %r" % a.since)
+    if a.since and subprocess.run(GIT + ["-C", root, "rev-parse", "--verify", "--quiet", a.since + "^{commit}"],
+                                  capture_output=True).returncode != 0:
+        ap.error("--since %s is not a commit in this repository (stale stamp?): run without --since" % a.since)
     files, is_git = list_files(root, a.since)
 
     skipped = collections.Counter()
@@ -313,23 +343,11 @@ def main():
         if not lang:
             skipped["not source (docs, data, media, config)"] += 1
             continue
-        full = os.path.join(root, rel)
-        try:
-            # Only plain files: a symlink or a named pipe could point outside the
-            # project or block forever (a hostile repository can contain both).
-            info = os.lstat(full)
-            if not stat.S_ISREG(info.st_mode):
-                skipped["symlink or special file"] += 1
-                continue
-            if info.st_size > MAX_BYTES:
-                skipped["over 1 MB"] += 1
-                continue
-            with open(full, "r", encoding="utf-8", errors="strict", newline="") as fh:
-                text = fh.read()
-        except (OSError, UnicodeDecodeError):
-            skipped["unreadable/binary"] += 1
+        text, why = read_regular(os.path.join(root, rel), MAX_BYTES)
+        if why:
+            skipped[why] += 1
             continue
-        st = analyze_file(rel, lang, text)
+        st = analyze_file(lang, text)
         st["path"] = rel
         st["is_test"] = bool(TEST_RE.search(rel))
         stem = os.path.splitext(os.path.basename(rel))[0]
@@ -344,22 +362,21 @@ def main():
               "skipped": dict(skipped), "folders": dict(folders.most_common()), "languages": {}}
 
     for lang, sts in sorted(per_lang.items(), key=lambda kv: -len(kv[1])):
-        tot_lines = sum(s["lines"] for s in sts)
-        tab = sum(s["tab_lines"] for s in sts)
+        def tot(key):
+            return sum(s[key] for s in sts)
+        tot_lines, tab = tot("lines"), tot("tab_lines")
         widths = [w for s in sts for w in s["space_widths"]]
         indented = tab + len(widths)
         unit = indent_unit(widths)
-        dq, sq, bt = (sum(s[k] for s in sts) for k in ("dq", "sq", "bt"))
+        dq, sq, bt = tot("dq"), tot("sq"), tot("bt")
         lens = sorted(l for s in sts for l in s["lens"])
         p95 = lens[int(0.95 * (len(lens) - 1))] if lens else 0
-        funcs, classes, consts = (collections.Counter() for _ in range(3))
-        idioms = collections.Counter()
-        for s in sts:
-            funcs.update(s["funcs"]); classes.update(s["classes"]); consts.update(s["consts"])
-            idioms.update(s["idioms"])
-        ig = sum(s["import_groups"] for s in sts)
-        igs = sum(s["import_groups_sorted"] for s in sts)
-        semi, nosemi = sum(s["semi"] for s in sts), sum(s["nosemi"] for s in sts)
+        funcs, classes, consts, idioms = (sum((s[k] for s in sts), collections.Counter())
+                                          for k in ("funcs", "classes", "consts", "idioms"))
+        ig, igs = tot("import_groups"), tot("import_groups_sorted")
+        semi, nosemi = tot("semi"), tot("nosemi")
+        crlf_files = sum(1 for s in sts if s["crlf"])
+        mixed_crlf = 0 < crlf_files < len(sts)
         name_cases = collections.Counter(
             s["name_case"] for s in sts if s["name_case"] and not s["is_config_file"])
         tests = [s for s in sts if s["is_test"]]
@@ -374,11 +391,11 @@ def main():
             flags = []
             if s["tab_lines"] + len(s["space_widths"]) >= 5:
                 f_tab = s["tab_lines"] > len(s["space_widths"])
-                if (f_tab and dom_indent == "spaces") or (not f_tab and dom_indent == "tabs"):
+                if f_tab != (dom_indent == "tabs"):
                     flags.append("indent " + ("tabs" if f_tab else "spaces"))
-                elif not f_tab and dom_indent == "spaces" and unit and s["space_widths"]:
+                elif not f_tab and unit and unit > 1 and len(s["space_widths"]) >= 20:
                     fu = indent_unit(s["space_widths"])
-                    if fu and fu > 1 and unit and unit > 1 and fu != unit and len(s["space_widths"]) >= 20:
+                    if fu > 1 and fu != unit:
                         flags.append("indent width %d" % fu)
             if dom_quote and s["dq"] + s["sq"] >= 5:
                 fq = "double" if s["dq"] >= s["sq"] else "single"
@@ -393,7 +410,7 @@ def main():
             if dom_name and s["name_case"] and s["name_case"] != dom_name \
                     and not s["is_config_file"] and not (s["is_component"] and s["name_case"] == "PascalCase"):
                 flags.append("file name " + s["name_case"])
-            if s["crlf"] and not all(x["crlf"] for x in sts):
+            if s["crlf"] and mixed_crlf:
                 flags.append("CRLF line endings")
             if flags:
                 scored.append((len(flags), s["path"], flags))
@@ -416,15 +433,14 @@ def main():
             "line_length": {"p95": p95, "max": lens[-1] if lens else 0},
             "functions": dict(funcs), "classes": dict(classes), "constants": dict(consts),
             "file_names": dict(name_cases),
-            "comment_line_pct": pct(sum(s["comment"] for s in sts), tot_lines),
-            "docstring_blocks": sum(s["docstrings"] for s in sts),
+            "comment_line_pct": pct(tot("comment"), tot_lines),
+            "docstring_blocks": tot("docstrings"),
             "imports": {"groups": ig, "sorted_groups": igs,
-                        "relative": sum(s["rel_imports"] for s in sts),
-                        "absolute": sum(s["abs_imports"] for s in sts)},
+                        "relative": tot("rel_imports"), "absolute": tot("abs_imports")},
             "idioms": dict(idioms),
-            "trailing_whitespace_lines": sum(s["trail_ws"] for s in sts),
+            "trailing_whitespace_lines": tot("trail_ws"),
             "files_without_final_newline": sum(1 for s in sts if not s["final_newline"]),
-            "crlf_files": sum(1 for s in sts if s["crlf"]),
+            "crlf_files": crlf_files,
             "tests": {"files": len(tests), "examples": [t["path"] for t in tests[:2]]},
             "examples": examples,
             "outliers": [{"path": p, "flags": f} for _, p, f in scored[:a.outliers]],
@@ -434,24 +450,22 @@ def main():
     # tooling
     present = [c for c in CONFIG_FILES if os.path.exists(os.path.join(root, c))]
     tools = {"configs": present, "commands": {}}
-    pj = os.path.join(root, "package.json")
-    if os.path.exists(pj):
+    body, _ = read_regular(os.path.join(root, "package.json"), MAX_BYTES)
+    if body:
         try:
-            scripts = json.load(open(pj)).get("scripts", {})
+            scripts = json.loads(body).get("scripts", {})
             for k in ("lint", "format", "fmt", "test", "typecheck", "check"):
                 if k in scripts:
                     tools["commands"][k] = "npm run " + k
-        except (ValueError, OSError):
+        except (ValueError, AttributeError):
             pass
-    pp = os.path.join(root, "pyproject.toml")
-    if os.path.exists(pp):
-        body = open(pp, encoding="utf-8", errors="ignore").read()
+    body, _ = read_regular(os.path.join(root, "pyproject.toml"), MAX_BYTES, errors="ignore")
+    if body:
         found = [t for t in PY_TOOL_SECTIONS if "[" + t in body]
         if found:
             tools["configs"] = [c + ("[" + ",".join(found) + "]" if c == "pyproject.toml" else "") for c in present]
-    mk = os.path.join(root, "Makefile")
-    if os.path.exists(mk):
-        body = open(mk, encoding="utf-8", errors="ignore").read()
+    body, _ = read_regular(os.path.join(root, "Makefile"), MAX_BYTES, errors="ignore")
+    if body:
         for k in ("lint", "format", "fmt", "test", "check"):
             if re.search(r"^%s\s*:" % k, body, re.M):
                 tools["commands"].setdefault(k, "make " + k)
@@ -459,8 +473,8 @@ def main():
 
     if a.json:
         print(json.dumps(report, indent=1, sort_keys=True))
-        return 0
-    print_text(report)
+    else:
+        print_text(report)
     return 0
 
 

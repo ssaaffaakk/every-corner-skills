@@ -17,7 +17,7 @@ Someone else's project (or an earlier session's) can look nothing like what you 
 
 ## Step 0: Reuse
 
-If `docs/every-corner/STYLE.md` exists, compare its commit stamp with `git log -1 --format=%h` and run `git diff --stat <stamp>..HEAD`. If nothing source-related changed, read no source files and go to Step 7. If files changed, run the script with `--since <stamp>`, re-read only those files, update their rows and the stamp, then go on. If `docs/every-corner/TOUR.md` exists, use it for the entry points instead of looking again.
+If `docs/every-corner/STYLE.md` exists, compare its commit stamp with `git log -1 --format=%h` and run `git diff --stat <stamp>..HEAD`. If nothing source-related changed, read no source files and go to Step 7. If files changed, run the script with `--since <stamp>`, re-read only those files, update their rows and the stamp, then go on. If the stamp is no longer a commit (after a rebase, the script says so), do the full study from Step 1. If `docs/every-corner/TOUR.md` exists, use it for the entry points instead of looking again.
 
 ## Step 1: Count every file
 

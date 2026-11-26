@@ -12,6 +12,7 @@
 # With it, the agent is sent to the same skill, which reuses STYLE.md and
 # re-reads only what changed: without this nudge later sessions never read it.
 # After that one block the agent can run the skill and retry, or retry as is.
+# When the skill itself runs, the session is marked and nothing is blocked.
 #
 # Installed as a plugin, switch it off with the "Style guard hook" option.
 
@@ -25,95 +26,91 @@ esac
 
 input="$(cat)"
 
-# git, but never with configuration planted in the repository: a committed folder
-# that looks like a bare repository (HEAD, objects/, refs/, config) would
-# otherwise be opened by git's discovery and its core.fsmonitor command run.
-g() { git -c safe.bareRepository=explicit -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"; }
-
-# Read three fields with jq, or, without jq, a sed fallback (so the hook never
-# switches itself off just because jq is missing). EVERY_CORNER_HOOK_PARSER=raw
+# Read the fields with jq (one call), or, without jq, a sed fallback per field, so
+# the hook never switches itself off just because jq is missing (the same idea as
+# explain-risky-commands.sh; keep the two in sync). EVERY_CORNER_HOOK_PARSER=raw
 # forces the fallback; the tests run every case with both.
-json_field() { # name -> value of the first string field with that name
-  if [ "${EVERY_CORNER_HOOK_PARSER:-auto}" != "raw" ] && command -v jq >/dev/null 2>&1; then
-    printf '%s' "$input" | jq -r --arg k "$1" '.. | objects | select(has($k)) | .[$k] | strings' 2>/dev/null | head -1 || true
-  else
-    printf '%s' "$input" | sed -nE 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' \
-      | head -1 | sed -e 's/\\\\/@@EC_BS@@/g' -e 's/\\"/"/g' -e 's/\\\//\//g' -e 's/@@EC_BS@@/\\/g' || true
-  fi
-}
-file="$(json_field file_path)"
-# The session id names a file below, so keep only safe characters (no ../).
-session="$(json_field session_id | tr -cd 'A-Za-z0-9_-')"
-[ -z "$session" ] && session="nosession"
-cwd="$(json_field cwd)"
+US=$'\037'   # field separator that cannot appear in a path
+if [ "${EVERY_CORNER_HOOK_PARSER:-auto}" != "raw" ] && command -v jq >/dev/null 2>&1; then
+  fields="$(printf '%s' "$input" | jq -r --arg us "$US" \
+    '[.tool_name, .session_id, .cwd, .tool_input.file_path, .tool_input.skill]
+     | map(if type == "string" then . else "" end) | join($us)' 2>/dev/null | head -1)"
+else
+  raw_field() { # name -> value of that string field (the hook input is one JSON line)
+    printf '%s' "$input" | sed -nE 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | head -1 \
+      | sed -e 's/\\\\/@@EC_BS@@/g' -e 's/\\"/"/g' -e 's/\\\//\//g' -e 's/@@EC_BS@@/\\/g'
+  }
+  fields="$(raw_field tool_name)$US$(raw_field session_id)$US$(raw_field cwd)$US$(raw_field file_path)$US$(raw_field skill)"
+fi
+IFS="$US" read -r tool session cwd file skill <<< "$fields"
+session="$(printf '%s' "$session" | tr -cd 'A-Za-z0-9_-')"   # names a file below: no ../
+[ -n "$session" ] || session="nosession"
 
-# Plugin data folder when Claude Code provides one, otherwise a folder only this
-# user owns. One empty file per session marks "already handled".
+# One empty file per session marks "already handled", in the plugin's data folder
+# when Claude Code provides one, otherwise in a folder only this user owns.
 guard="${CLAUDE_PLUGIN_DATA:-${TMPDIR:-/tmp}}/every-corner-style-guard"
 mark() { # -> 0 only if this session's mark now exists
-  [ -e "$guard/$session" ] && return 0
   mkdir -p -m 700 "$guard" 2>/dev/null && [ -O "$guard" ] && [ ! -L "$guard" ] || return 1
-  find "$guard" -type f -mtime +7 -delete 2>/dev/null || true   # old sessions
-  : > "$guard/$session" 2>/dev/null && [ -f "$guard/$session" ] && [ ! -L "$guard/$session" ]
+  find "$guard" -type f -mtime +7 -delete 2>/dev/null   # old sessions
+  : > "$guard/$session" 2>/dev/null
 }
 
 # The skill itself ran (the agent followed its description): mark the session,
-# so the first edit afterwards is not sent back to the skill.
-if [ "$(json_field tool_name)" = "Skill" ]; then
-  case "$(json_field skill)" in *every-corner-matchcodebase*) mark || true ;; esac
+# so the first edit afterwards is not sent back to it.
+if [ "$tool" = "Skill" ]; then
+  case "$skill" in *every-corner-matchcodebase*) mark ;; esac
   exit 0
 fi
 
-[ -z "$file" ] && exit 0
-
-SRC_EXT='py|js|jsx|mjs|cjs|ts|tsx|go|rs|java|kt|rb|php|c|h|cpp|cc|hpp|cs|swift|sh|scala|dart|lua'
-ext="${file##*.}"
-[ "$ext" = "$file" ] && exit 0
-printf '%s' "$ext" | grep -Eqx "$SRC_EXT" || exit 0
-
-# Nearest existing folder of the file (the folder may not exist yet for a new file).
-dir="$(dirname "$file")"
-while [ ! -d "$dir" ] && [ "$dir" != "/" ] && [ "$dir" != "." ]; do dir="$(dirname "$dir")"; done
-[ -d "$dir" ] || exit 0
-# Compare real paths: git reports the top folder with symlinks resolved
-# (macOS /tmp is /private/tmp), Claude Code may not.
-real_dir="$(cd "$dir" 2>/dev/null && pwd -P)" || exit 0
-file="$real_dir${file#"$dir"}"; dir="$real_dir"
-[ -n "$cwd" ] && cwd="$(cd "$cwd" 2>/dev/null && pwd -P || printf '%s' "$cwd")"
-
-root="$(g -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)"
-
-# Only guard the project Claude is working in: a scratch script in a temp
-# folder or a file in another repository is not the user's code.
-if [ -n "$cwd" ] && [ "${file#"$cwd"/}" = "$file" ]; then
-  cwd_root="$(g -C "$cwd" rev-parse --show-toplevel 2>/dev/null || true)"
-  [ -n "$root" ] && [ "$root" = "$cwd_root" ] || exit 0
-fi
-
-if [ -z "$root" ]; then
-  # No git: the working folder if the file is inside it, otherwise the file's own folder.
-  if [ -n "$cwd" ] && [ "${file#"$cwd"/}" != "$file" ]; then root="$cwd"; else root="$dir"; fi
-fi
-
-# Already blocked once (or the skill already ran) in this session.
+# Cheap checks first: a source file, a session not handled yet, a working folder.
+# Keep the extensions in sync with LANGS in skills/every-corner-matchcodebase/scripts/style-counts.py.
+case "${file##*.}" in
+  py|js|jsx|mjs|cjs|ts|tsx|go|rs|java|kt|rb|php|c|h|cpp|cc|hpp|cs|swift|sh|scala|dart|lua) ;;
+  *) exit 0 ;;
+esac
+case "$file" in /*) ;; *) exit 0 ;; esac   # Claude Code sends absolute paths
 [ -e "$guard/$session" ] && exit 0
+[ -n "$cwd" ] && [ -d "$cwd" ] || exit 0
+
+# git, but never with configuration planted in the repository: a committed folder
+# that looks like a bare repository (HEAD, objects/, refs/, config) would otherwise
+# be opened by git's discovery and its core.fsmonitor command run. (Git older than
+# 2.38 ignores safe.bareRepository; core.fsmonitor=false still stops the command.)
+g() { git -c safe.bareRepository=explicit -c core.fsmonitor=false "$@"; }
+
+# The project is the working folder's repository, or the working folder itself.
+# Real paths on both sides: git reports them with symlinks resolved (macOS /tmp is
+# /private/tmp), Claude Code may not.
+cwd="$(cd "$cwd" && pwd -P)" || exit 0
+root="$(g -C "$cwd" rev-parse --show-toplevel 2>/dev/null)"
+in_git=1; [ -n "$root" ] || { root="$cwd"; in_git=0; }
+
+# The file's nearest existing folder (a new file may sit in a folder not created yet).
+dir="${file%/*}"
+while [ -n "$dir" ] && [ ! -d "$dir" ]; do dir="${dir%/*}"; done
+[ -n "$dir" ] || dir="/"
+real_dir="$(cd "$dir" && pwd -P)" || exit 0
+file="$real_dir${file#"$dir"}"
+
+# Only guard the project Claude is working in: a scratch script in a temp folder
+# or a file in another repository is not the user's code.
+case "$file" in "$root"/*) ;; *) exit 0 ;; esac
+rel="${file#"$root"/}"
 
 # Does the project already contain other source code?
-has_code=""
-if g -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+src_re='\.(py|js|jsx|mjs|cjs|ts|tsx|go|rs|java|kt|rb|php|c|h|cpp|cc|hpp|cs|swift|sh|scala|dart|lua)$'
+if [ "$in_git" = 1 ]; then
   has_code="$(g -C "$root" ls-files --cached --others --exclude-standard 2>/dev/null \
-    | grep -E "\\.(${SRC_EXT})\$" | grep -vxF -- "${file#"$root"/}" | head -1 || true)"
+    | grep -E "$src_re" | grep -vxF -- "$rel" | head -1)"
 else
-  names=()
-  for e in ${SRC_EXT//|/ }; do names+=(-o -name "*.$e"); done
   has_code="$(find "$root" -maxdepth 4 \
     \( -name node_modules -o -name .git -o -name vendor -o -name venv -o -name .venv \) -prune -o \
-    -type f \( -name '*.__none__' "${names[@]}" \) ! -path "$file" -print 2>/dev/null | head -1 || true)"
+    -type f ! -path "$file" -print 2>/dev/null | grep -E "$src_re" | head -1)"
 fi
-[ -z "$has_code" ] && exit 0
+[ -n "$has_code" ] || exit 0
 
-# Block only if the mark could be written: otherwise every edit of the session
-# would be blocked, and never write through a planted folder or symlink.
+# Block only if the mark could be written; otherwise every edit of the session
+# would be blocked.
 mark || exit 0
 
 off="This check blocks once per session; the user can turn it off with /plugin configure every-corner@every-corner-skills."

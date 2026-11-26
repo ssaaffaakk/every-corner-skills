@@ -18,6 +18,8 @@ command -v jq >/dev/null 2>&1 && parsers="jq"
 parsers="$parsers raw"
 
 fail=0; total=0
+# shellcheck source=../tests/matchcodebase/git-fixtures.sh
+. "$PWD/../tests/matchcodebase/git-fixtures.sh"
 
 # Hook input for an Edit call, built without jq (the test paths contain no special characters).
 input_for() { # file session [cwd]  (cwd defaults to the project folder under $T)
@@ -26,16 +28,17 @@ input_for() { # file session [cwd]  (cwd defaults to the project folder under $T
   printf '{"tool_name":"Edit","session_id":"%s","cwd":"%s","tool_input":{"file_path":"%s"}}' "$2" "$cwd" "$1"
 }
 
-check() { # expected name file session [VAR=value] [cwd]
-  local expected="$1" name="$2" file="$3" session="$4" extra="${5:-EVERY_CORNER_NOOP=1}" cwd="${6:-}" out got p ok=1
+run_case() { # expected name VAR=value json  (@P@ in json becomes the parser name; one check per parser)
+  local expected="$1" name="$2" extra="$3" json="$4" out rc got p ok=1
   for p in $parsers; do
     total=$((total + 1))
-    out="$(input_for "$file" "$session-$p" "$cwd" | env "$extra" EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+    out="$(printf '%s' "${json//@P@/$p}" | env "$extra" EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK" 2>/dev/null)"; rc=$?
     case "$out" in
       '') got="pass" ;;
       *'"permissionDecision":"deny"'*) got="block" ;;
       *) got="unknown" ;;
     esac
+    [ "$rc" -eq 0 ] || got="exit $rc"
     if [ "$got" = "block" ] && command -v jq >/dev/null 2>&1 && ! printf '%s' "$out" | jq -e . >/dev/null 2>&1; then
       got="invalid-json"
     fi
@@ -47,13 +50,21 @@ check() { # expected name file session [VAR=value] [cwd]
   [ "$ok" -eq 1 ] && printf 'ok    %-6s %s\n' "$expected" "$name"
 }
 
+check() { # expected name file session [VAR=value] [cwd]
+  run_case "$1" "$2" "${5:-EVERY_CORNER_NOOP=1}" "$(input_for "$3" "$4-@P@" "${6:-}")"
+}
+
+expect_absent() { # name path  -> one check: the path must not exist
+  total=$((total + 1))
+  if [ -e "$2" ]; then echo "FAIL  $1"; fail=$((fail + 1)); else printf 'ok    %-6s %s\n' pass "$1"; fi
+}
+
 mkproject() { # dir  -> git project with two source files
   mkdir -p "$1/app"; ( cd "$1" && git init -q \
     && printf 'def loadOrders(p):\n\treturn p\n' > app/orders.py \
     && printf 'def loadUsers(p):\n\treturn p\n' > app/users.py \
-    && git add -A && git -c user.email=t@t -c user.name=t commit -qm init )
+    && git add -A && git commit -qm init )
 }
-
 # 1. Source edit in a project with code and no STYLE.md: block once.
 mkproject "$T/p1"
 check block "source edit, project has code, no STYLE.md" "$T/p1/app/orders.py" s1
@@ -91,10 +102,8 @@ mkproject "$T/p7"; mkdir -p "$T/p7/sub"
 check block "file in the same repo but outside the working subfolder" "$T/p7/app/orders.py" s14 EVERY_CORNER_NOOP=1 "$T/p7/sub"
 mkproject "$T/p8"
 check block "session id with ../ is still blocked once" "$T/p8/app/orders.py" "../../escaped"
-if ls "$T" | grep -q escaped || ls "$TMPDIR" | grep -q escaped; then
-  echo "FAIL  guard file escaped its folder"; fail=$((fail + 1))
-else echo "ok    pass   guard file stays in its folder"; fi
-total=$((total + 1))
+expect_absent "guard file stays in its folder" "$T/escaped-jq"
+expect_absent "guard file stays in its folder (raw)" "$T/escaped-raw"
 mkproject "$T/p9"
 big="$(awk 'BEGIN { for (i = 0; i < 100000; i++) printf "def f%d(x):\\n    return x\\n", i }')"
 for p in $parsers; do
@@ -109,51 +118,25 @@ done
 
 # Code review: unwritable mark folder, skill run before the first edit, symlinked paths.
 mkproject "$T/p10"; mkdir -p "$T/ro"; chmod 500 "$T/ro"
-for p in $parsers; do
-  total=$((total + 1)); n=0
-  for i in 1 2 3; do
-    out="$(input_for "$T/p10/app/new.py" "ro-$p" | CLAUDE_PLUGIN_DATA="$T/ro" EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
-    case "$out" in *'"deny"'*) n=$((n + 1)) ;; esac
-  done
-  if [ "$n" -eq 0 ]; then echo "ok    pass   [$p] unwritable mark folder never blocks"
-  else echo "FAIL  [$p] unwritable mark folder blocked $n of 3 edits"; fail=$((fail + 1)); fi
+for i in 1 2 3; do
+  check pass "unwritable mark folder never blocks (edit $i)" "$T/p10/app/new.py" ro CLAUDE_PLUGIN_DATA="$T/ro"
 done
 chmod 700 "$T/ro"
 mkproject "$T/p11"
-for p in $parsers; do
-  total=$((total + 1))
-  out="$(printf '{"tool_name":"Skill","session_id":"sk-%s","cwd":"%s","tool_input":{"skill":"every-corner:every-corner-matchcodebase"}}' "$p" "$T/p11" \
-    | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
-  [ -z "$out" ] || { echo "FAIL  [$p] the Skill call itself was blocked"; fail=$((fail + 1)); }
-  total=$((total + 1))
-  out="$(input_for "$T/p11/app/orders.py" "sk-$p" | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
-  if [ -z "$out" ]; then echo "ok    pass   [$p] skill ran first: the first edit is not blocked"
-  else echo "FAIL  [$p] skill ran first, edit still blocked"; fail=$((fail + 1)); fi
-done
-mkdir -p "$T/real/solo" && ( cd "$T/real/solo" && git init -q && printf 'x = 1\n' > main.py && git add -A && git -c user.email=t@t -c user.name=t commit -qm i )
+run_case pass "the Skill call itself is never blocked" EVERY_CORNER_NOOP=1 \
+  "{\"tool_name\":\"Skill\",\"session_id\":\"sk-@P@\",\"cwd\":\"$T/p11\",\"tool_input\":{\"skill\":\"every-corner:every-corner-matchcodebase\"}}"
+check pass "skill ran first: the first edit is not blocked" "$T/p11/app/orders.py" sk
+mkdir -p "$T/real/solo" && ( cd "$T/real/solo" && git init -q && printf 'x = 1\n' > main.py && git add -A && git commit -qm i )
 ln -s "$T/real" "$T/link"
 check pass "only source file, reached through a symlinked folder" "$T/link/solo/main.py" s15 EVERY_CORNER_NOOP=1 "$T/link/solo"
 
-mkbare() { # dir marker -> clone of a repo whose src/ is shaped like a bare repository with an fsmonitor payload
-  local up="$1-up"; mkdir -p "$up/src/objects" "$up/src/refs/heads"
-  ( cd "$up" && git init -q && printf 'ref: refs/heads/main\n' > src/HEAD && touch src/objects/.keep src/refs/heads/.keep \
-    && printf '[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tworktree = .\n\tfsmonitor = "touch %s; false"\n' "$2" > src/config \
-    && printf 'x = 1\n' > src/app.py && printf 'y = 1\n' > main.py \
-    && git add -A && git -c user.email=t@t -c user.name=t commit -qm i && git clone -q "$up" "$1" )
-}
 mkbare "$T/bare" "$T/PWNED"
 check block "repo with a planted bare-repository folder (still guarded)" "$T/bare/src/app.py" s16
-total=$((total + 1))
-if [ -e "$T/PWNED" ]; then echo "FAIL  a planted git config ran a command from the hook"; fail=$((fail + 1))
-else echo "ok    pass   planted git config never runs"; fi
+expect_absent "planted git config never runs" "$T/PWNED"
 
 # 5. Bad input must never error or block.
-for p in $parsers; do
-  total=$((total + 1))
-  out="$(printf 'not json' | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK" 2>/dev/null)"; rc=$?
-  if [ -z "$out" ] && [ "$rc" -eq 0 ]; then echo "ok    pass   [$p] malformed input is ignored"
-  else echo "FAIL  [$p] malformed input (rc=$rc)"; fail=$((fail + 1)); fi
-done
+run_case pass "malformed input is ignored" EVERY_CORNER_NOOP=1 'not json'
+run_case pass "a relative path is ignored" EVERY_CORNER_NOOP=1 "{\"session_id\":\"rel-@P@\",\"cwd\":\"$T/p1\",\"tool_input\":{\"file_path\":\"app/orders.py\"}}"
 
 echo
 if [ "$fail" -eq 0 ]; then echo "All $total cases passed."; else echo "$fail of $total cases failed."; exit 1; fi

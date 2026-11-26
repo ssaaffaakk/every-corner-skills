@@ -15,6 +15,8 @@ PY
   then pass=$((pass+1)); echo "PASS $1"; else fail=$((fail+1)); echo "FAIL $1"; fi
 }
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+# shellcheck source=git-fixtures.sh
+. tests/matchcodebase/git-fixtures.sh
 python3 $S $F/odd-python --json > "$TMP/py.json" || { echo "FAIL script crashed on odd-python"; exit 1; }
 python3 $S $F/semi-less-js --json > "$TMP/js.json" || { echo "FAIL script crashed on semi-less-js"; exit 1; }
 
@@ -74,7 +76,7 @@ mkfifo "$H/src/pipe.py" "$TMP/outside.fifo"; ln -s "$TMP/outside.fifo" "$H/src/l
 timed "hostile files (long lines, FIFO, symlink to FIFO) finish" 10 python3 -I $S "$H" --json
 python3 -I $S "$H" --json > "$TMP/h.json" 2>/dev/null
 check "FIFO and symlink are skipped, not read"     "d['skipped'].get('symlink or special file')==2" "$TMP/h.json"
-( cd "$H" && git init -q && git add src/ok.py && git -c user.email=t@t -c user.name=t commit -qm i )
+( cd "$H" && git init -q && git add src/ok.py && git commit -qm i )
 python3 -I $S "$H" "--since=--output=$TMP/pwned" >/dev/null 2>&1
 if [ -e "$TMP/pwned..HEAD" ]; then fail=$((fail+1)); echo "FAIL --since passed an option to git"
 else pass=$((pass+1)); echo "PASS --since accepts only a commit hash"; fi
@@ -84,13 +86,11 @@ stamp=$(git -C "$H" log -1 --format=%h)
 python3 -I $S "$H" --since "$stamp" --json > "$TMP/since.json"
 check "--since counts uncommitted and untracked changes" "d['languages']['python']['files']==2" "$TMP/since.json"
 
-mkbare() { # dir marker -> clone of a repo whose src/ is shaped like a bare repository with an fsmonitor payload
-  local up="$1-up"; mkdir -p "$up/src/objects" "$up/src/refs/heads"
-  ( cd "$up" && git init -q && printf 'ref: refs/heads/main\n' > src/HEAD && touch src/objects/.keep src/refs/heads/.keep \
-    && printf '[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tworktree = .\n\tfsmonitor = "touch %s; false"\n' "$2" > src/config \
-    && printf 'x = 1\n' > src/app.py && printf 'y = 1\n' > main.py \
-    && git add -A && git -c user.email=t@t -c user.name=t commit -qm i && git clone -q "$up" "$1" )
-}
+# Tooling files are read the same safe way, and a stale --since stamp is an error.
+mkdir -p "$TMP/tool" && printf 'x = 1\n' > "$TMP/tool/a.py" && mkfifo "$TMP/tool/Makefile" "$TMP/tool/package.json"
+timed "FIFO named Makefile or package.json does not hang" 10 python3 -I $S "$TMP/tool"
+if python3 -I $S "$H" --since deadbeef >/dev/null 2>&1; then fail=$((fail+1)); echo "FAIL --since with an unknown commit was accepted"
+else pass=$((pass+1)); echo "PASS --since with an unknown commit stops with an error"; fi
 mkbare "$TMP/bare" "$TMP/PWNED"
 python3 -I $S "$TMP/bare/src" --json > /dev/null 2>&1; python3 -I $S "$TMP/bare" --json > /dev/null 2>&1
 if [ -e "$TMP/PWNED" ]; then fail=$((fail+1)); echo "FAIL a planted git config ran a command from the script"
