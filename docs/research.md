@@ -190,10 +190,10 @@ Read-only sweep of 31 existing skill or command files across five projects, plus
 State on 2026-11-26: all are open except PR-Agent #5144, which has since been closed.
 
 - [Superpowers #2724](https://github.com/obra/superpowers/issues/2724): a `HEAD~1` review base can omit earlier commits. Diff and review use the actual PR base and merge base.
-- [Superpowers #2726](https://github.com/obra/superpowers/issues/2726): README workflow drift makes promises inaccurate. The README's always-on token figure here is computed from the skill descriptions (3,451 characters for nine skills, about 900 tokens) and rechecked when a skill is added.
+- [Superpowers #2726](https://github.com/obra/superpowers/issues/2726): README workflow drift makes promises inaccurate. The README's always-on token figure here was computed from the skill descriptions on 2026-11-26 (3,451 characters for nine skills, about 900 tokens); recompute it when a description changes.
 - [Anthropic plugins #7178](https://github.com/anthropics/claude-plugins-official/issues/7178): a reviewer imported another project's logging conventions. Review requires current-project evidence, and `every-corner-matchcodebase` cites only lines it re-opened.
-- [CodeRabbit skills #77](https://github.com/coderabbitai/skills/issues/77): skill workflow gaps were found by reviewing the skill itself. Our verification ledger treats trigger evals and skipped checks separately.
-- [Spec Kit #5566](https://github.com/github/spec-kit/issues/5566): a stored feature path can point at a missing folder. Verify an existing spec path and its status before using it.
+- [CodeRabbit skills #77](https://github.com/coderabbitai/skills/issues/77): skill workflow gaps were found by reviewing the skill itself. Verify marks a check that did not run as `Blocked` or `Unverified`, never `Pass`.
+- [Spec Kit #5566](https://github.com/github/spec-kit/issues/5566): a stored feature path can point at a missing folder. Verify reads the spec it is pointed at and treats a Draft as not approved; it does not repair a missing path.
 - [PR-Agent #5144](https://github.com/The-PR-Agent/pr-agent/issues/5144): ignored files can be excluded from an unreviewed count. Diff and review list partial, skipped and unknown paths explicitly.
 - [PR-Agent #5121](https://github.com/The-PR-Agent/pr-agent/issues/5121): findings without severity are hard to prioritize. Review labels each verified finding.
 - [reviewdog #2151](https://github.com/reviewdog/reviewdog/issues/2151): file links lose subdirectory prefixes. Every citation uses a complete project-root path.

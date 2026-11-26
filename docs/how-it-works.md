@@ -142,7 +142,7 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 
 ## The five working skills
 
-`debug`, `verify`, `diff`, `review` and `handoff` are single-file skills with no script or hook. Each one reads first, follows a read-only command list, saves one note from an inline template under `docs/every-corner/`, and lists every path it considered as read, partial, skipped or unknown. They are described in the [README](../README.md); their trigger tests are in `evals/`, and their design sources are in the [survey](research.md#november-2026-survey-for-five-additional-skills-plus-one-dropped).
+`debug`, `verify`, `diff`, `review` and `handoff` are single-file skills with no script or hook. Each one reads first, follows a read-only command list, saves one note from an inline template under `docs/every-corner/`, and keeps a coverage ledger of what it did and did not check. They are described in the [README](../README.md); their trigger tests are in `evals/`, and their design sources are in the [survey](research.md#november-2026-survey-for-five-additional-skills-plus-one-dropped).
 
 ## The hook
 
