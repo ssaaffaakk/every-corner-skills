@@ -28,7 +28,7 @@ These rules apply to the skills, the hook warnings and the docs:
 
 ## Changing a skill
 
-Each skill is a single `SKILL.md` file in `skills/<name>/`. When you change one:
+Each skill is a `SKILL.md` file in `skills/<name>/` (`every-corner-matchcodebase` also has `scripts/style-counts.py`; run `./tests/matchcodebase/test-style-counts.sh` after changing it). When you change one:
 
 - Keep the front matter (`name`, `description`) valid. The `description` decides when Claude uses the skill, so make it specific.
 - If your change affects what users see, update the matching file in `examples/`.

@@ -14,3 +14,11 @@ jobs:
         run: |
           chmod +x hooks/explain-risky-commands.sh hooks/test-hook.sh
           ./hooks/test-hook.sh
+      - name: Run style guard hook tests
+        run: |
+          chmod +x hooks/require-style-study.sh hooks/test-style-guard.sh
+          ./hooks/test-style-guard.sh
+      - name: Run style-counts tests
+        run: |
+          chmod +x tests/matchcodebase/test-style-counts.sh
+          ./tests/matchcodebase/test-style-counts.sh

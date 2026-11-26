@@ -2,6 +2,25 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
+## 1.1.0 (2026-11-26)
+
+### Added
+- **every-corner-matchcodebase:** before any code is written in a project that already has code, it learns how the project is really written and used, saves `docs/every-corner/STYLE.md`, writes new code in that exact style, and checks the result with the project's own formatter, linter and tests.
+  - A counting script (`skills/every-corner-matchcodebase/scripts/style-counts.py`, standard library only) covers every file in one pass and prints numbers and file names, never code. The agent reads in full only the config, the area it will touch, a few example files and the outliers.
+  - Cached by commit: an unchanged project reads no source files on the next run.
+  - Read-only study; bugs and unsafe patterns found in the old code are reported, not copied.
+- [Research report](docs/every-corner/research/matchcodebase-landscape.md) on similar tools and the evidence behind the design, and the [spec](docs/every-corner/specs/every-corner-matchcodebase.md).
+- **Style guard hook** (`hooks/require-style-study.sh`): in a project with code and no `STYLE.md`, it blocks the first source edit of a session and tells the agent to run the new skill first. Blocks once per session, never in an empty project or for non-source files; on by default, switch off with the "Style guard hook" option. 14 tests, run in CI.
+- `tests/matchcodebase/`: fixtures with deliberately odd styles, 17 checks for the script, and `run-session.sh` for headless with/without runs.
+
+### Changed
+- `every-corner-interview` and `every-corner-tour` point to the new skill (the interview reads `STYLE.md` when it exists).
+
+### Known limits (first smoke tests, one fixture, one run each)
+- **A description alone did not start it for a tiny request.** Asked to "add a function" to a 5-file project, the agent edited directly in 2 of 2 runs. With the style guard hook it started in 2 of 2 runs (an "add" and a "fix" request). Two runs on one small fixture are an indication, not proof.
+- **Cost on a tiny project is higher, not lower.** Fix request: 12 turns, $0.43, 77 s with the skill; 6 turns, $0.29, 40 s without (same diff). The savings are designed for larger projects and are not yet measured (spec R15, R16).
+- The counting script runs as an ordinary shell command, so it asks for approval like any other (in a headless run with no allow rule it is denied and the agent counts by hand, which costs more).
+
 ## 1.0.3 (2026-11-16)
 
 Result of a [stress test](docs/stress-test.md): eight adversarial scenarios run as real headless sessions with a simulated user. Three failed on the first run because the skill never loaded.

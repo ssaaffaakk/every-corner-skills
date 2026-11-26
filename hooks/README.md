@@ -63,3 +63,19 @@ This runs 34 example commands and checks that each lands at the right level.
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for the wording rules.
 
 > **A safety net, not a security boundary.** Pattern matching can be evaded, and the hook will miss things. For a stronger guard, combine it with a dedicated tool such as [dcg](https://github.com/Dicklesworthstone/destructive_command_guard), and use Claude Code's permission rules.
+
+---
+
+# The style guard hook
+
+`require-style-study.sh` makes sure `every-corner-matchcodebase` runs before code is written in a project that already has code. A skill description alone did not start the skill for small requests (2 of 2 test runs skipped it), and a hook runs every time.
+
+It watches `Edit`, `Write` and `MultiEdit`. It blocks **once per session**, and only when all of these are true:
+
+- the file being written is a source file (`.py`, `.js`, `.ts`, `.go`, `.rs` and similar);
+- the project already contains other source files (code in `node_modules`, `vendor` and virtual environments does not count);
+- `docs/every-corner/STYLE.md` does not exist yet.
+
+The agent is told to run the skill and then repeat the edit. It never blocks twice in a session, never in an empty project, and never for docs or config files. Tests: `./hooks/test-style-guard.sh` (14 cases, also run in CI).
+
+**You need:** `jq`. **Installed the plugin?** It is on by default; turn it off with `/plugin configure every-corner@every-corner-skills` (option "Style guard hook"). For a manual install, copy the script like the safety net above and register it with the matcher `Edit|Write|MultiEdit`.

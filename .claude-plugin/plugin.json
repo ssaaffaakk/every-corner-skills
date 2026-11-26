@@ -1,7 +1,7 @@
 {
   "name": "every-corner",
-  "version": "1.0.3",
-  "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, and explains every risky command before you click Accept.",
+  "version": "1.1.0",
+  "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, writes new code in your project's exact style, and explains every risky command before you click Accept.",
   "author": {
     "name": "ssaaffaakk",
     "url": "https://github.com/ssaaffaakk"
@@ -15,13 +15,21 @@
     "spec-driven-development",
     "code-safety",
     "beginners",
-    "senior-developer"
+    "senior-developer",
+    "code-style",
+    "conventions"
   ],
   "userConfig": {
     "safetynet": {
       "type": "boolean",
       "title": "Safety-net hook",
       "description": "Warn before dangerous shell commands (rm -rf, git push --force, DROP TABLE and more) with a plain-English explanation and a safer option. Safe commands are never interrupted.",
+      "default": true
+    },
+    "styleguard": {
+      "type": "boolean",
+      "title": "Style guard hook",
+      "description": "Before the first code edit in a project that already has code and no style notes, ask Claude to run every-corner-matchcodebase first. Blocks at most once per session. Turn off if you do not want it.",
       "default": true
     }
   }

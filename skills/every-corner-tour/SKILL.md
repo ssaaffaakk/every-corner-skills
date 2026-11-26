@@ -143,7 +143,7 @@ End with a one-line summary of the loop, e.g. "door -> receptionist -> desk -> d
 
 ## Step 8: Hand over in chat
 
-In chat, give a short friendly summary (the one-sentence description, the story's one-line loop, the two biggest surprises), the path to `tour_file`, and ask what they want next: go deeper on a part, or start a feature. If they want to build something, hand off to `every-corner-interview`, which reads `tour_file` first and therefore asks fewer questions.
+In chat, give a short friendly summary (the one-sentence description, the story's one-line loop, the two biggest surprises), the path to `tour_file`, and ask what they want next: go deeper on a part, or start a feature. If they want to build something, hand off to `every-corner-matchcodebase` (it learns the project's code style) and then `every-corner-interview`, which reads `tour_file` and `STYLE.md` first and therefore asks fewer questions.
 
 ## Anti-patterns
 

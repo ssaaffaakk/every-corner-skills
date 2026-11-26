@@ -1,5 +1,5 @@
 {
-  "description": "Safety net: plain-English warnings before dangerous shell commands. Turn it off with the plugin's 'Safety-net hook' option.",
+  "description": "Safety net: plain-English warnings before dangerous shell commands (option 'Safety-net hook'). Style guard: blocks the first source edit in a project with code until every-corner-matchcodebase has run (option 'Style guard hook').",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,16 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/explain-risky-commands.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/require-style-study.sh\"",
             "timeout": 10
           }
         ]
