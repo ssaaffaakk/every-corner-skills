@@ -34,6 +34,10 @@ MAX_BYTES = 1000000
 # Declaration patterns backtrack badly on very long lines; real declarations are short.
 MAX_DECL_LINE = 400
 SHA = re.compile(r"^[0-9a-fA-F]{4,40}$")
+# Never let the repository's own files configure git: a committed folder shaped
+# like a bare repository would otherwise be opened and its core.fsmonitor run.
+GIT = ["git", "-c", "safe.bareRepository=explicit", "-c", "core.fsmonitor=false",
+       "-c", "core.hooksPath=/dev/null"]
 
 FUNC = {
     "python": r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)",
@@ -139,13 +143,13 @@ def list_files(root, since):
     try:
         if since:
             # Against the working tree, plus untracked files: uncommitted work counts too.
-            out = subprocess.run(["git", "-C", root, "diff", "--name-only", since],
+            out = subprocess.run(GIT + ["-C", root, "diff", "--name-only", since],
                                  capture_output=True, text=True, check=True).stdout
-            out += subprocess.run(["git", "-C", root, "ls-files", "--others", "--exclude-standard"],
+            out += subprocess.run(GIT + ["-C", root, "ls-files", "--others", "--exclude-standard"],
                                   capture_output=True, text=True, check=True).stdout
             files = sorted({f for f in out.splitlines() if os.path.exists(os.path.join(root, f))})
         else:
-            out = subprocess.run(["git", "-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+            out = subprocess.run(GIT + ["-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
                                  capture_output=True, text=True, check=True).stdout
             files = [f for f in out.split("\0") if f]
         return files, True

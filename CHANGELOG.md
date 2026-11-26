@@ -18,6 +18,7 @@ All notable changes to this project are listed here. Versions follow the `versio
 - The counting script skips symlinks and special files: a named pipe called `x.py`, or a symlink to one, made it hang forever, and a symlink could point outside the project.
 - Declaration patterns are applied only to lines up to 400 characters, with runs of spaces collapsed: one Java or C# line with 3,000 spaces took over 20 s.
 - `--since` accepts only a commit hash. `--since=--output=FILE` was passed to `git diff` as an option and wrote a file, and the value comes from `STYLE.md`, which a repository can contain.
+- **Security:** the hook and the script run git with `safe.bareRepository=explicit`, `core.fsmonitor=false` and no hooks. A repository could commit a folder shaped like a bare git repository whose `config` sets `core.fsmonitor` to a command; the hook ran git from the edited file's folder, so the first edit there ran that command (reproduced). The skill also tells the agent to run git only from the project root.
 - The skill runs the script with `python3 -I`, so nothing from the project folder or `PYTHONPATH` is imported (the same lesson as the 1.0.5 hook).
 - The style guard ignores files outside the working project (a scratch script in a temp folder was blocked and the agent was told to write `STYLE.md` there), keeps the session id to safe characters (`../` wrote outside its folder), and keeps its once-per-session marks in the plugin's own data folder.
 

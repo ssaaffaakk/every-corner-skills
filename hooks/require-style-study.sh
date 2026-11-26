@@ -25,6 +25,11 @@ esac
 
 input="$(cat)"
 
+# git, but never with configuration planted in the repository: a committed folder
+# that looks like a bare repository (HEAD, objects/, refs/, config) would
+# otherwise be opened by git's discovery and its core.fsmonitor command run.
+g() { git -c safe.bareRepository=explicit -c core.fsmonitor=false -c core.hooksPath=/dev/null "$@"; }
+
 # Read three fields with jq, or, without jq, a sed fallback (so the hook never
 # switches itself off just because jq is missing). EVERY_CORNER_HOOK_PARSER=raw
 # forces the fallback; the tests run every case with both.
@@ -76,12 +81,12 @@ real_dir="$(cd "$dir" 2>/dev/null && pwd -P)" || exit 0
 file="$real_dir${file#"$dir"}"; dir="$real_dir"
 [ -n "$cwd" ] && cwd="$(cd "$cwd" 2>/dev/null && pwd -P || printf '%s' "$cwd")"
 
-root="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)"
+root="$(g -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)"
 
 # Only guard the project Claude is working in: a scratch script in a temp
 # folder or a file in another repository is not the user's code.
 if [ -n "$cwd" ] && [ "${file#"$cwd"/}" = "$file" ]; then
-  cwd_root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || true)"
+  cwd_root="$(g -C "$cwd" rev-parse --show-toplevel 2>/dev/null || true)"
   [ -n "$root" ] && [ "$root" = "$cwd_root" ] || exit 0
 fi
 
@@ -95,8 +100,8 @@ fi
 
 # Does the project already contain other source code?
 has_code=""
-if git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  has_code="$(git -C "$root" ls-files --cached --others --exclude-standard 2>/dev/null \
+if g -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  has_code="$(g -C "$root" ls-files --cached --others --exclude-standard 2>/dev/null \
     | grep -E "\\.(${SRC_EXT})\$" | grep -vxF -- "${file#"$root"/}" | head -1 || true)"
 else
   names=()

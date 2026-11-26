@@ -134,6 +134,19 @@ mkdir -p "$T/real/solo" && ( cd "$T/real/solo" && git init -q && printf 'x = 1\n
 ln -s "$T/real" "$T/link"
 check pass "only source file, reached through a symlinked folder" "$T/link/solo/main.py" s15 EVERY_CORNER_NOOP=1 "$T/link/solo"
 
+mkbare() { # dir marker -> clone of a repo whose src/ is shaped like a bare repository with an fsmonitor payload
+  local up="$1-up"; mkdir -p "$up/src/objects" "$up/src/refs/heads"
+  ( cd "$up" && git init -q && printf 'ref: refs/heads/main\n' > src/HEAD && touch src/objects/.keep src/refs/heads/.keep \
+    && printf '[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tworktree = .\n\tfsmonitor = "touch %s; false"\n' "$2" > src/config \
+    && printf 'x = 1\n' > src/app.py && printf 'y = 1\n' > main.py \
+    && git add -A && git -c user.email=t@t -c user.name=t commit -qm i && git clone -q "$up" "$1" )
+}
+mkbare "$T/bare" "$T/PWNED"
+check block "repo with a planted bare-repository folder (still guarded)" "$T/bare/src/app.py" s16
+total=$((total + 1))
+if [ -e "$T/PWNED" ]; then echo "FAIL  a planted git config ran a command from the hook"; fail=$((fail + 1))
+else echo "ok    pass   planted git config never runs"; fi
+
 # 5. Bad input must never error or block.
 for p in $parsers; do
   total=$((total + 1))

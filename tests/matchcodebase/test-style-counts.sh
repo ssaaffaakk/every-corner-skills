@@ -84,5 +84,17 @@ stamp=$(git -C "$H" log -1 --format=%h)
 python3 -I $S "$H" --since "$stamp" --json > "$TMP/since.json"
 check "--since counts uncommitted and untracked changes" "d['languages']['python']['files']==2" "$TMP/since.json"
 
+mkbare() { # dir marker -> clone of a repo whose src/ is shaped like a bare repository with an fsmonitor payload
+  local up="$1-up"; mkdir -p "$up/src/objects" "$up/src/refs/heads"
+  ( cd "$up" && git init -q && printf 'ref: refs/heads/main\n' > src/HEAD && touch src/objects/.keep src/refs/heads/.keep \
+    && printf '[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tworktree = .\n\tfsmonitor = "touch %s; false"\n' "$2" > src/config \
+    && printf 'x = 1\n' > src/app.py && printf 'y = 1\n' > main.py \
+    && git add -A && git -c user.email=t@t -c user.name=t commit -qm i && git clone -q "$up" "$1" )
+}
+mkbare "$TMP/bare" "$TMP/PWNED"
+python3 -I $S "$TMP/bare/src" --json > /dev/null 2>&1; python3 -I $S "$TMP/bare" --json > /dev/null 2>&1
+if [ -e "$TMP/PWNED" ]; then fail=$((fail+1)); echo "FAIL a planted git config ran a command from the script"
+else pass=$((pass+1)); echo "PASS planted git config never runs"; fi
+
 echo; echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
