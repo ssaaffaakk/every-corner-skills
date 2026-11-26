@@ -107,6 +107,33 @@ for p in $parsers; do
   else echo "ok    block  [$p] 3 MB write handled in ${took}s"; fi
 done
 
+# Code review: unwritable mark folder, skill run before the first edit, symlinked paths.
+mkproject "$T/p10"; mkdir -p "$T/ro"; chmod 500 "$T/ro"
+for p in $parsers; do
+  total=$((total + 1)); n=0
+  for i in 1 2 3; do
+    out="$(input_for "$T/p10/app/new.py" "ro-$p" | CLAUDE_PLUGIN_DATA="$T/ro" EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+    case "$out" in *'"deny"'*) n=$((n + 1)) ;; esac
+  done
+  if [ "$n" -eq 0 ]; then echo "ok    pass   [$p] unwritable mark folder never blocks"
+  else echo "FAIL  [$p] unwritable mark folder blocked $n of 3 edits"; fail=$((fail + 1)); fi
+done
+chmod 700 "$T/ro"
+mkproject "$T/p11"
+for p in $parsers; do
+  total=$((total + 1))
+  out="$(printf '{"tool_name":"Skill","session_id":"sk-%s","cwd":"%s","tool_input":{"skill":"every-corner:every-corner-matchcodebase"}}' "$p" "$T/p11" \
+    | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+  [ -z "$out" ] || { echo "FAIL  [$p] the Skill call itself was blocked"; fail=$((fail + 1)); }
+  total=$((total + 1))
+  out="$(input_for "$T/p11/app/orders.py" "sk-$p" | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+  if [ -z "$out" ]; then echo "ok    pass   [$p] skill ran first: the first edit is not blocked"
+  else echo "FAIL  [$p] skill ran first, edit still blocked"; fail=$((fail + 1)); fi
+done
+mkdir -p "$T/real/solo" && ( cd "$T/real/solo" && git init -q && printf 'x = 1\n' > main.py && git add -A && git -c user.email=t@t -c user.name=t commit -qm i )
+ln -s "$T/real" "$T/link"
+check pass "only source file, reached through a symlinked folder" "$T/link/solo/main.py" s15 EVERY_CORNER_NOOP=1 "$T/link/solo"
+
 # 5. Bad input must never error or block.
 for p in $parsers; do
   total=$((total + 1))

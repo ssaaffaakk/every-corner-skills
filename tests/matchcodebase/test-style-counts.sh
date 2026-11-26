@@ -79,5 +79,10 @@ python3 -I $S "$H" "--since=--output=$TMP/pwned" >/dev/null 2>&1
 if [ -e "$TMP/pwned..HEAD" ]; then fail=$((fail+1)); echo "FAIL --since passed an option to git"
 else pass=$((pass+1)); echo "PASS --since accepts only a commit hash"; fi
 
+( cd "$H" && printf 'y = 2\n' > src/new_untracked.py && printf 'x = 3\n' > src/ok.py )
+stamp=$(git -C "$H" log -1 --format=%h)
+python3 -I $S "$H" --since "$stamp" --json > "$TMP/since.json"
+check "--since counts uncommitted and untracked changes" "d['languages']['python']['files']==2" "$TMP/since.json"
+
 echo; echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

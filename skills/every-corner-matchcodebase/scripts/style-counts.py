@@ -138,9 +138,12 @@ def case_of(name):
 def list_files(root, since):
     try:
         if since:
-            out = subprocess.run(["git", "-C", root, "diff", "--name-only", since + "..HEAD"],
+            # Against the working tree, plus untracked files: uncommitted work counts too.
+            out = subprocess.run(["git", "-C", root, "diff", "--name-only", since],
                                  capture_output=True, text=True, check=True).stdout
-            files = [f for f in out.splitlines() if os.path.exists(os.path.join(root, f))]
+            out += subprocess.run(["git", "-C", root, "ls-files", "--others", "--exclude-standard"],
+                                  capture_output=True, text=True, check=True).stdout
+            files = sorted({f for f in out.splitlines() if os.path.exists(os.path.join(root, f))})
         else:
             out = subprocess.run(["git", "-C", root, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
                                  capture_output=True, text=True, check=True).stdout

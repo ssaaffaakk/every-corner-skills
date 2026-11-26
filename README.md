@@ -105,7 +105,7 @@ The hook then needs a manual setup: see [hooks/README.md](hooks/README.md).
 - 📝 **Short style notes.** `STYLE.md` keeps only what your tools don't already enforce, each rule with a quoted example you can open.
 - 🧪 **Checks its own work.** After writing, it runs your formatter, linter and tests, then compares naming and structure with the nearest existing file.
 - ♻️ **Cached by commit.** An unchanged project costs almost nothing the second time. Bugs it finds in the old code are reported, not copied.
-- 🪝 **Starts on its own.** A small hook stops the first code edit in a project that has code but no style notes, once per session, and sends the agent to this skill first. Switch it off with `/plugin configure every-corner@every-corner-skills`.
+- 🪝 **Starts on its own.** A small hook stops the first code edit of a session in a project that has code and sends the agent to this skill first (which reuses `STYLE.md` when it exists). It never blocks twice in a session, or if the skill already ran. Switch it off with `/plugin configure every-corner@every-corner-skills`.
 
 ### 🛑 every-corner-explain: *never click Accept blindly again*
 

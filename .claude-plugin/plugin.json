@@ -29,7 +29,7 @@
     "styleguard": {
       "type": "boolean",
       "title": "Style guard hook",
-      "description": "Before the first code edit in a project that already has code and no style notes, ask Claude to run every-corner-matchcodebase first. Blocks at most once per session. Turn off if you do not want it.",
+      "description": "Before the first code edit of a session in a project that already has code, ask Claude to run every-corner-matchcodebase first (it studies the project, or reuses docs/every-corner/STYLE.md when it exists). Blocks at most once per session, and not at all if the skill already ran. Turn off if you do not want it.",
       "default": true
     }
   }

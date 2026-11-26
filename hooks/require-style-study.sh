@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse hook for Edit, Write and MultiEdit.
+# PreToolUse hook for Edit, Write and MultiEdit (and Skill, see below).
 #
 # Makes sure every-corner-matchcodebase runs before code is written in a project that
 # already has code. A skill description alone did not trigger it for small requests
@@ -33,7 +33,7 @@ json_field() { # name -> value of the first string field with that name
     printf '%s' "$input" | jq -r --arg k "$1" '.. | objects | select(has($k)) | .[$k] | strings' 2>/dev/null | head -1 || true
   else
     printf '%s' "$input" | sed -nE 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' \
-      | head -1 | sed -e 's/\\\//\//g' -e 's/\\\\/\\/g' || true
+      | head -1 | sed -e 's/\\\\/@@EC_BS@@/g' -e 's/\\"/"/g' -e 's/\\\//\//g' -e 's/@@EC_BS@@/\\/g' || true
   fi
 }
 file="$(json_field file_path)"
@@ -41,6 +41,23 @@ file="$(json_field file_path)"
 session="$(json_field session_id | tr -cd 'A-Za-z0-9_-')"
 [ -z "$session" ] && session="nosession"
 cwd="$(json_field cwd)"
+
+# Plugin data folder when Claude Code provides one, otherwise a folder only this
+# user owns. One empty file per session marks "already handled".
+guard="${CLAUDE_PLUGIN_DATA:-${TMPDIR:-/tmp}}/every-corner-style-guard"
+mark() { # -> 0 only if this session's mark now exists
+  [ -e "$guard/$session" ] && return 0
+  mkdir -p -m 700 "$guard" 2>/dev/null && [ -O "$guard" ] && [ ! -L "$guard" ] || return 1
+  find "$guard" -type f -mtime +7 -delete 2>/dev/null || true   # old sessions
+  : > "$guard/$session" 2>/dev/null && [ -f "$guard/$session" ] && [ ! -L "$guard/$session" ]
+}
+
+# The skill itself ran (the agent followed its description): mark the session,
+# so the first edit afterwards is not sent back to the skill.
+if [ "$(json_field tool_name)" = "Skill" ]; then
+  case "$(json_field skill)" in *every-corner-matchcodebase*) mark || true ;; esac
+  exit 0
+fi
 
 [ -z "$file" ] && exit 0
 
@@ -53,6 +70,11 @@ printf '%s' "$ext" | grep -Eqx "$SRC_EXT" || exit 0
 dir="$(dirname "$file")"
 while [ ! -d "$dir" ] && [ "$dir" != "/" ] && [ "$dir" != "." ]; do dir="$(dirname "$dir")"; done
 [ -d "$dir" ] || exit 0
+# Compare real paths: git reports the top folder with symlinks resolved
+# (macOS /tmp is /private/tmp), Claude Code may not.
+real_dir="$(cd "$dir" 2>/dev/null && pwd -P)" || exit 0
+file="$real_dir${file#"$dir"}"; dir="$real_dir"
+[ -n "$cwd" ] && cwd="$(cd "$cwd" 2>/dev/null && pwd -P || printf '%s' "$cwd")"
 
 root="$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)"
 
@@ -68,10 +90,7 @@ if [ -z "$root" ]; then
   if [ -n "$cwd" ] && [ "${file#"$cwd"/}" != "$file" ]; then root="$cwd"; else root="$dir"; fi
 fi
 
-# Already blocked once in this session: never block twice.
-# The plugin's private data folder when Claude Code provides one; otherwise a
-# folder only this user can write to.
-guard="${CLAUDE_PLUGIN_DATA:-${TMPDIR:-/tmp}}/every-corner-style-guard"
+# Already blocked once (or the skill already ran) in this session.
 [ -e "$guard/$session" ] && exit 0
 
 # Does the project already contain other source code?
@@ -88,10 +107,9 @@ else
 fi
 [ -z "$has_code" ] && exit 0
 
-# Never write through a folder or file someone else planted (shared /tmp).
-if mkdir -p -m 700 "$guard" 2>/dev/null && [ -O "$guard" ] && [ ! -L "$guard" ] && [ ! -L "$guard/$session" ]; then
-  : > "$guard/$session" 2>/dev/null || true
-fi
+# Block only if the mark could be written: otherwise every edit of the session
+# would be blocked, and never write through a planted folder or symlink.
+mark || exit 0
 
 off="This check blocks once per session; the user can turn it off with /plugin configure every-corner@every-corner-skills."
 if [ -f "$root/docs/every-corner/STYLE.md" ]; then
