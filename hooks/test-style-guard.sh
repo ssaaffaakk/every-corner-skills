@@ -161,6 +161,25 @@ run_case pass "another skill does not mark the session" EVERY_CORNER_NOOP=1 \
   "{\"tool_name\":\"Skill\",\"session_id\":\"sk3-@P@\",\"cwd\":\"$T/sk\",\"tool_input\":{\"skill\":\"every-corner-tour\"}}"
 check block "...so the first edit afterwards is still blocked" "$T/sk/a.py" sk3
 
+# Round 3: a nested repository is judged by its own code; the STYLE.md message really is the reuse message.
+mkdir -p "$T/outer" && ( cd "$T/outer" && git init -q && printf 'a = 1\n' > a.py && printf 'b = 1\n' > b.py && git add -A && git commit -qm i )
+mkdir -p "$T/outer/inner" && ( cd "$T/outer/inner" && git init -q && printf 'z = 1\n' > only.py && git add -A && git commit -qm i )
+check pass "a nested repository with a single source file is judged on its own" "$T/outer/inner/only.py" s25 EVERY_CORNER_NOOP=1 "$T/outer"
+for p in $parsers; do
+  total=$((total + 1))
+  out="$(input_for "$T/p2/app/orders.py" "msg-$p" | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+  case "$out" in
+    *"reuses those notes"*) printf 'ok    block  [%s] with STYLE.md the message says it reuses the notes\n' "$p" ;;
+    *) echo "FAIL  [$p] wrong message when STYLE.md exists: ${out:0:80}"; fail=$((fail + 1)) ;;
+  esac
+  total=$((total + 1))
+  out="$(input_for "$T/p1/app/orders.py" "msg2-$p" | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+  case "$out" in
+    *"has no style notes yet"*) printf 'ok    block  [%s] without STYLE.md the message says there are no notes\n' "$p" ;;
+    *) echo "FAIL  [$p] wrong message without STYLE.md: ${out:0:80}"; fail=$((fail + 1)) ;;
+  esac
+done
+
 # 5. Bad input must never error or block.
 run_case pass "malformed input is ignored" EVERY_CORNER_NOOP=1 'not json'
 run_case pass "a relative path is ignored" EVERY_CORNER_NOOP=1 "{\"session_id\":\"rel-@P@\",\"cwd\":\"$T/p1\",\"tool_input\":{\"file_path\":\"app/orders.py\"}}"

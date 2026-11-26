@@ -179,7 +179,7 @@ def list_files(root, since):
     try:
         if since:
             # Against the working tree, plus untracked files: uncommitted work counts too.
-            out = subprocess.run(GIT + ["-C", root, "diff", "--name-only", "-z", "--relative", since],
+            out = subprocess.run(GIT + ["-C", root, "diff", "--name-only", "-z", "--relative", since, "--"],
                                  capture_output=True, check=True).stdout.decode("utf-8", "surrogateescape")
             out += subprocess.run(GIT + ["-C", root, "ls-files", "--others", "--exclude-standard", "-z"],
                                   capture_output=True, check=True).stdout.decode("utf-8", "surrogateescape")
@@ -190,6 +190,8 @@ def list_files(root, since):
             files = [f for f in out.split("\0") if f]
         return files, True
     except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        if since:
+            sys.exit("style-counts.py: git could not list the files changed since %s; run without --since" % since)
         files = []
         for dp, dns, fns in os.walk(root):
             dns[:] = [d for d in dns if d not in SKIP_DIRS]
@@ -326,6 +328,7 @@ def main():
     ap.add_argument("--since", help="only count files changed since this commit")
     ap.add_argument("--outliers", type=int, default=5, help="outliers listed per language")
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
+    ap.add_argument("--budget", type=float, default=BUDGET_SECONDS, help="stop reading files after this many seconds")
     a = ap.parse_args()
     root = os.path.abspath(a.root)
     if not os.path.isdir(root):
@@ -342,8 +345,8 @@ def main():
     per_lang = collections.defaultdict(list)
     started = time.monotonic()
     for n, rel in enumerate(files):
-        if time.monotonic() - started > BUDGET_SECONDS:
-            skipped["not reached (%d s time budget)" % BUDGET_SECONDS] += len(files) - n
+        if time.monotonic() - started >= a.budget:
+            skipped["not reached (%g s time budget)" % a.budget] += len(files) - n
             break
         parts = rel.split("/")
         folders[parts[0] if len(parts) > 1 else "."] += 1
@@ -513,12 +516,19 @@ def mix(counter):
     return ", ".join("%s %d%%" % (k, pct(v, total)) for k, v in counter.most_common(3)) + " (n=%d)" % total
 
 
+def clean(text):
+    """A file name from the repository, safe to print: control characters (a newline or an
+    ANSI escape would forge output lines) and bytes that are not UTF-8 are shown escaped."""
+    return "".join(c if c.isprintable() else ("\\x%02x" % ord(c) if ord(c) < 256 else "\\u%04x" % ord(c))
+                   for c in text)
+
+
 def print_text(r):
     sk = sum(r["skipped"].values())
-    print("STYLE COUNTS  root=%s  git=%s" % (r["root"], r["git"]))
+    print("STYLE COUNTS  root=%s  git=%s" % (clean(r["root"]), r["git"]))
     print("files listed %d | counted %d | skipped %d %s" % (
         r["files_listed"], r["files_counted"], sk, dict(r["skipped"]) if sk else ""))
-    print("folders: " + ", ".join("%s %d" % (k, v) for k, v in list(r["folders"].items())[:15]))
+    print("folders: " + ", ".join("%s %d" % (clean(k), v) for k, v in list(r["folders"].items())[:15]))
     for lang, d in r["languages"].items():
         print("\n== %s (%d files, %d lines)" % (lang, d["files"], d["lines"]))
         ind = d["indent"]
@@ -560,13 +570,13 @@ def print_text(r):
         if hygiene:
             print("hygiene: " + "; ".join(hygiene))
         t = d["tests"]
-        print("tests: %d files%s" % (t["files"], (" e.g. " + ", ".join(t["examples"])) if t["examples"] else ""))
+        print("tests: %d files%s" % (t["files"], (" e.g. " + ", ".join(clean(e) for e in t["examples"])) if t["examples"] else ""))
         if d["examples"]:
-            print("examples (read in full): " + ", ".join(d["examples"]))
+            print("examples (read in full): " + ", ".join(clean(e) for e in d["examples"]))
         if d["outliers"]:
             print("outliers (read in full) %d total, showing %d:" % (d["outliers_total"], len(d["outliers"])))
             for o in d["outliers"]:
-                print("  %s  [%s]" % (o["path"], "; ".join(o["flags"])))
+                print("  %s  [%s]" % (clean(o["path"]), "; ".join(o["flags"])))
         else:
             print("outliers: none")
     t = r["tooling"]

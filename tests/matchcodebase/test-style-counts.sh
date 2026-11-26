@@ -161,6 +161,27 @@ check "--since from a subfolder root lists only that folder, including a modifie
 if python3 -I $S "$TMP/no-such-folder" >/dev/null 2>&1; then fail=$((fail+1)); echo "FAIL a missing folder was accepted"
 else pass=$((pass+1)); echo "PASS a missing folder stops with an error"; fi
 
+# File names from the repository are data: a name that is not UTF-8, or has a newline, must not crash or forge lines.
+mkdir -p "$TMP/names" && ( cd "$TMP/names" && git init -q && printf 'x = 1\n' > a.py && git add -A && git commit -qm i \
+  && git update-index --add --cacheinfo "100644,$(printf 'x = 1\n' | git hash-object -w --stdin),$(printf '\377\376/b.py')" \
+  && printf 'y = 1\n' > "$(printf 'c\nFORGED LINE.py')" )
+for loc in en_US.UTF-8 C.UTF-8 C; do
+  timed "text report with non-UTF-8 and newline names under LC_ALL=$loc" 10 env LC_ALL=$loc python3 -I $S "$TMP/names"
+done
+if python3 -I $S "$TMP/names" | grep -q '^FORGED LINE'; then fail=$((fail+1)); echo "FAIL a file name forged a line of the report"
+else pass=$((pass+1)); echo "PASS a file name cannot forge a line of the report"; fi
+
+# --since: a file named like the commit must not make git fail (and fall back to a full count).
+H2="$TMP/ambig"; mkdir -p "$H2" && ( cd "$H2" && git init -q && printf 'x = 1\n' > a.py && git add -A && git commit -qm one \
+  && printf 'y = 1\n' > b.py && git add -A && git commit -qm two )
+ambig=$(git -C "$H2" log -1 --format=%h); printf x > "$H2/$ambig"
+python3 -I $S "$H2" --since "$ambig" --json > "$TMP/ambig.json"
+check "--since works when a file is named like the commit" "d['git'] is True and d['files_listed']==1" "$TMP/ambig.json"
+
+# The time budget: files not reached are reported, not silently dropped.
+python3 -I $S "$H2" --budget 0 --json > "$TMP/budget.json"
+check "--budget 0 reads nothing and says so" "d['files_counted']==0 and any('not reached' in k for k in d['skipped'])" "$TMP/budget.json"
+
 # Tooling files are read the same safe way, and a stale --since stamp is an error.
 mkdir -p "$TMP/tool" && printf 'x = 1\n' > "$TMP/tool/a.py" && mkfifo "$TMP/tool/Makefile" "$TMP/tool/package.json"
 timed "FIFO named Makefile or package.json does not hang" 10 python3 -I $S "$TMP/tool"

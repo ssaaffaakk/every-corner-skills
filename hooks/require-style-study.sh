@@ -98,12 +98,10 @@ while [ -n "$dir" ] && [ ! -d "$dir" ]; do dir="${dir%/*}"; done
 real_dir="$(cd "$dir" && pwd -P)" || exit 0
 file="$real_dir${file#"$dir"}"
 
-# Claude Code started in a folder that is not a repository itself (a parent holding
-# several projects): use the edited file's repository when it lies below that folder.
-if [ "$in_git" = 0 ]; then
-  sub="$(g -C "$real_dir" rev-parse --show-toplevel 2>/dev/null)"
-  case "$sub" in "$cwd"/*) root="$sub"; in_git=1 ;; esac
-fi
+# The edited file may belong to a repository of its own below the working project: a
+# parent folder holding several projects, or a nested repository. Judge it by that one.
+sub="$(g -C "$real_dir" rev-parse --show-toplevel 2>/dev/null)"
+case "$sub" in "$root"/*) root="$sub"; in_git=1 ;; esac
 
 # Only guard the project Claude is working in: a scratch script in a temp folder
 # or a file in another repository is not the user's code.

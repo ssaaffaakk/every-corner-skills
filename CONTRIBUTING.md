@@ -44,7 +44,7 @@ Each skill is a `SKILL.md` file in `skills/<name>/` (`every-corner-matchcodebase
 If you change a skill's `description`, also run the trigger tests locally (they use your own Claude account, so they don't run in CI):
 
 ```bash
-claude plugin eval . --runs 1 --ablation none
+claude plugin eval . --tag interview --runs 1 --ablation none
 ```
 
 The `every-corner-matchcodebase` cases need a project with code to start in, so each one has a `scaffold.sh` that copies a fixture from `tests/matchcodebase/fixtures/`. Scaffolds only run with `--scaffold`, and the cases need permission to edit:

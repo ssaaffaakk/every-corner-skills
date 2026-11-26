@@ -126,8 +126,8 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 | ID | Result | Note |
 |---|---|---|
 | R1 | Met (2 runs) | Without the hook: not invoked in 2 of 2 runs. With the style guard hook: invoked in 2 of 2 runs ("add a function", "fix a file-handle leak"); order was Read, Edit blocked once, Skill, script, `STYLE.md`, Edit. Empty-folder case covered by the hook tests, not by a headless run. |
-| R19 | Met | 82 hook checks pass (each case with and without jq), also under macOS bash 3.2; the existing hook tests (423 checks after merging main) still pass; `claude plugin validate --strict .` passes; real runs t5 and t6 started the skill. |
-| R2 | Met | `scripts/style-counts.py`; 35 checks in `tests/matchcodebase/test-style-counts.sh`; file counts add up; output has no code; 1,000 files in about 0.2 s. Heuristic outliers; JS/TS semicolon detection is approximate. |
+| R19 | Met | 88 hook checks pass (each case with and without jq), also under macOS bash 3.2; the existing hook tests (423 checks after merging main) still pass; `claude plugin validate --strict .` passes; real runs t5 and t6 started the skill. |
+| R2 | Met | `scripts/style-counts.py`; 41 checks in `tests/matchcodebase/test-style-counts.sh`; file counts add up; output has no code; 1,000 files in about 0.2 s. Heuristic outliers; JS/TS semicolon detection is approximate. |
 | R3 | Met (one run) | Run t4: only `ls`, `git ls-files`, the script, `cat`/Read and `git log`/`grep` before the first write; `make lint` and `make test` ran only after the edit. |
 | R4 | Met (one run) | `STYLE.md` written with 10 citations; all 10 resolve to real lines. Under the size cap. |
 | R5 | Not tested | Fixture has one older-style file; the agent labelled it legacy. No mixed-area test yet. |
@@ -138,8 +138,8 @@ Done checks are headless sessions on a fixture project (`claude -p`, as in `docs
 | R10 | Met (one run) | Run t2 listed the missing `__init__`, unused imports and an unclosed file under "Defects seen" and copied none. |
 | R11 | Not tested | |
 | R12 | Met | One helper agent per folder is in Step 3; with the script, size no longer forces a full read (1,000-file check). |
-| R13 | Met | Skill, manifests (1.1.0), changelog, README, how-it-works, example, CI step; front matter valid; hook tests 82/82. |
-| R14 | Met | `SKILL.md` is 105 lines, about 1,800 tokens by chars/4. |
+| R13 | Met | Skill, manifests (1.1.0), changelog, README, how-it-works, example, CI step; front matter valid; hook tests 88/88. |
+| R14 | Met | `SKILL.md` is 105 lines, about 1,950 tokens by chars/4. |
 | R15 | Partly | `tests/matchcodebase/run-session.sh` runs paired with/without sessions and prints cost and tokens. Only single runs so far. |
 | R16 | Not yet | One fixture cannot show a win: the neighbor function already shows the style, so the no-skill run matched it too. Needs harder fixtures. |
 | R17 | Partly | The script's cost does not grow with file count. Tokens versus project size not measured. |
