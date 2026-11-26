@@ -84,4 +84,4 @@ For several similar level-2 actions (renaming a function across five files), wri
 ## Working with the other skills and the hook
 
 - After `every-corner-interview`, the spec gives every action a reason: "Why: step 3 of the spec you approved."
-- The optional hook in this repo (`hooks/explain-risky-commands.sh`) independently catches the most dangerous shell commands and adds a short warning to the prompt, even if you forget. It is a safety net, not a replacement for this skill.
+- The hook in this repo (`hooks/explain-risky-commands.sh`, on by default when installed as a plugin) independently catches the most dangerous shell commands and adds a short warning to the prompt, even if you forget. It is a safety net, not a replacement for this skill.

@@ -22,7 +22,7 @@ These rules apply to the skills, the hook warnings and the docs:
 
 ## Adding a hook pattern
 
-1. Add a new `elif match '...'` branch to [`hooks/explain-risky-commands.sh`](hooks/explain-risky-commands.sh) with a plain-language `reason`.
+1. Add a check to [`hooks/explain-risky-commands.sh`](hooks/explain-risky-commands.sh): `if has "<regex>"; then raise 4 "<what it does>" "<safer option>"; fi` (or `raise 3` for hard to undo). [hooks/README.md](hooks/README.md#add-a-new-pattern) explains the regex building blocks.
 2. Add test cases to [`hooks/test-hook.sh`](hooks/test-hook.sh): at least one dangerous command that should be flagged, and one similar-looking safe command that should pass.
 3. Run `./hooks/test-hook.sh` and make sure everything passes.
 
@@ -39,7 +39,19 @@ Each skill is a `SKILL.md` file in `skills/<name>/` (`every-corner-matchcodebase
 1. Fork the repo and create a branch from `main`.
 2. Make a focused change. One idea per pull request.
 3. Fill in the pull request template.
-4. CI runs the hook tests. Please make sure they pass.
+4. CI runs the hook tests on Linux and macOS, ShellCheck, and `claude plugin validate --strict`. Please make sure they pass.
+
+If you change a skill's `description`, also run the trigger tests locally (they use your own Claude account, so they don't run in CI):
+
+```bash
+claude plugin eval . --runs 1 --ablation none
+```
+
+Keep `--ablation none`: in the default two-arm run, the "should trigger" graders (`tool_used: Skill`) are reported only as indicators and don't count toward the score, so a triggering regression would not fail the run.
+
+## Releases (maintainers)
+
+The version lives only in `.claude-plugin/plugin.json`. Bump it there, add a `CHANGELOG.md` entry, and tag the release. Do not add a `version` to the marketplace entry: when both are set, `plugin.json` wins and the two drift apart.
 
 ## Reporting problems
 

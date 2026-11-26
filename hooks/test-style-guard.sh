@@ -1,32 +1,48 @@
 #!/usr/bin/env bash
 # Tests for require-style-study.sh
-# Usage: ./hooks/test-style-guard.sh
+# Usage: ./hooks/test-style-guard.sh            (HOOK_BASH=/bin/bash to run the hook with a specific bash)
 # Each case says whether the hook should "block" (deny, once) or "pass" (silent).
+# Every case runs once per parser the hook supports (jq, and the fallback used
+# without jq), so the hook is proven to work without jq too. jq is skipped if missing.
 
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 HOOK="$PWD/require-style-study.sh"
+hook_bash="${HOOK_BASH:-bash}"
 
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 export TMPDIR="$T/tmp"; mkdir -p "$TMPDIR"
 
+parsers=""
+command -v jq >/dev/null 2>&1 && parsers="jq"
+parsers="$parsers raw"
+
 fail=0; total=0
 
-run() { # file session [env assignment]  -> prints hook output
-  local file="$1" session="$2"
-  jq -n --arg f "$file" --arg s "$session" --arg c "$PWD" \
-    '{tool_name:"Edit", session_id:$s, cwd:$c, tool_input:{file_path:$f}}' | "$HOOK"
+# Hook input for an Edit call, built without jq (the test paths contain no special characters).
+input_for() { # file session
+  printf '{"tool_name":"Edit","session_id":"%s","cwd":"%s","tool_input":{"file_path":"%s"}}' "$2" "$PWD" "$1"
 }
+
 check() { # expected name file session [VAR=value]
-  local expected="$1" name="$2" file="$3" session="$4" out got
-  total=$((total + 1))
-  if [ -n "${5:-}" ]; then out="$(env "$5" "$HOOK" < <(jq -n --arg f "$file" --arg s "$session" '{session_id:$s, tool_input:{file_path:$f}}'))"
-  else out="$(run "$file" "$session")"; fi
-  if [ -z "$out" ]; then got="pass"
-  elif [ "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision')" = "deny" ]; then got="block"
-  else got="unknown"; fi
-  if [ "$got" = "$expected" ]; then printf 'ok    %-6s %s\n' "$expected" "$name"
-  else printf 'FAIL  expected %s, got %s: %s\n' "$expected" "$got" "$name"; fail=$((fail + 1)); fi
+  local expected="$1" name="$2" file="$3" session="$4" extra="${5:-EVERY_CORNER_NOOP=1}" out got p ok=1
+  for p in $parsers; do
+    total=$((total + 1))
+    out="$(input_for "$file" "$session-$p" | env "$extra" EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+    case "$out" in
+      '') got="pass" ;;
+      *'"permissionDecision":"deny"'*) got="block" ;;
+      *) got="unknown" ;;
+    esac
+    if [ "$got" = "block" ] && command -v jq >/dev/null 2>&1 && ! printf '%s' "$out" | jq -e . >/dev/null 2>&1; then
+      got="invalid-json"
+    fi
+    if [ "$got" != "$expected" ]; then
+      printf 'FAIL  [%s] expected %s, got %s: %s\n' "$p" "$expected" "$got" "$name"
+      fail=$((fail + 1)); ok=0
+    fi
+  done
+  [ "$ok" -eq 1 ] && printf 'ok    %-6s %s\n' "$expected" "$name"
 }
 
 mkproject() { # dir  -> git project with two source files
@@ -66,9 +82,12 @@ mkdir -p "$T/nm/node_modules/pkg" && printf 'module.exports = 1\n' > "$T/nm/node
 check pass "code only inside node_modules does not count" "$T/nm/app.js" s12
 
 # 4. Bad input must never error or block.
-total=$((total + 1))
-out="$(printf 'not json' | "$HOOK" 2>/dev/null)"; rc=$?
-if [ -z "$out" ] && [ "$rc" -eq 0 ]; then echo "ok    pass   malformed input is ignored"; else echo "FAIL  malformed input (rc=$rc)"; fail=$((fail + 1)); fi
+for p in $parsers; do
+  total=$((total + 1))
+  out="$(printf 'not json' | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK" 2>/dev/null)"; rc=$?
+  if [ -z "$out" ] && [ "$rc" -eq 0 ]; then echo "ok    pass   [$p] malformed input is ignored"
+  else echo "FAIL  [$p] malformed input (rc=$rc)"; fail=$((fail + 1)); fi
+done
 
 echo
 if [ "$fail" -eq 0 ]; then echo "All $total cases passed."; else echo "$fail of $total cases failed."; exit 1; fi

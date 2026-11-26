@@ -13,20 +13,29 @@
 #
 # Installed as a plugin, switch it off with the "Style guard hook" option.
 
-set -euo pipefail
+set -uo pipefail
 
 case "${CLAUDE_PLUGIN_OPTION_STYLEGUARD:-true}" in
   false|False|FALSE|0|no|off) exit 0 ;;
 esac
 
-# Without jq we cannot read the tool input; stay out of the way rather than error.
-command -v jq >/dev/null 2>&1 || exit 0
-
 input="$(cat)"
-file="$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)"
-session="$(printf '%s' "$input" | jq -r '.session_id // "nosession"' 2>/dev/null || true)"
+
+# Read three fields with jq, or, without jq, a sed fallback (so the hook never
+# switches itself off just because jq is missing). EVERY_CORNER_HOOK_PARSER=raw
+# forces the fallback; the tests run every case with both.
+json_field() { # name -> value of the first string field with that name
+  if [ "${EVERY_CORNER_HOOK_PARSER:-auto}" != "raw" ] && command -v jq >/dev/null 2>&1; then
+    printf '%s' "$input" | jq -r --arg k "$1" '.. | objects | select(has($k)) | .[$k] | strings' 2>/dev/null | head -1 || true
+  else
+    printf '%s' "$input" | sed -nE 's/.*"'"$1"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' \
+      | head -1 | sed -e 's/\\\//\//g' -e 's/\\\\/\\/g' || true
+  fi
+}
+file="$(json_field file_path)"
+session="$(json_field session_id)"
 [ -z "$session" ] && session="nosession"
-cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null || true)"
+cwd="$(json_field cwd)"
 
 [ -z "$file" ] && exit 0
 
@@ -71,4 +80,5 @@ mkdir -p "$guard" 2>/dev/null && : > "$guard/$session" 2>/dev/null || true
 
 reason="STOP before writing code: this project already contains code and has no style notes yet (docs/every-corner/STYLE.md). Run the every-corner-matchcodebase skill first so the new code matches how this project is written, then repeat this edit. This check blocks once per session; the user can turn it off with /plugin configure every-corner@every-corner-skills."
 
-jq -n --arg r "$reason" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
+# Built by hand so the output never depends on jq. The reason has no quotes or backslashes.
+printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}\n' "$reason"

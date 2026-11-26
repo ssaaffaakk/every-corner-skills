@@ -10,7 +10,7 @@ All notable changes to this project are listed here. Versions follow the `versio
   - Cached by commit: an unchanged project reads no source files on the next run.
   - Read-only study; bugs and unsafe patterns found in the old code are reported, not copied.
 - [Research report](docs/every-corner/research/matchcodebase-landscape.md) on similar tools and the evidence behind the design, and the [spec](docs/every-corner/specs/every-corner-matchcodebase.md).
-- **Style guard hook** (`hooks/require-style-study.sh`): in a project with code and no `STYLE.md`, it blocks the first source edit of a session and tells the agent to run the new skill first. Blocks once per session, never in an empty project or for non-source files; on by default, switch off with the "Style guard hook" option. 14 tests, run in CI.
+- **Style guard hook** (`hooks/require-style-study.sh`): in a project with code and no `STYLE.md`, it blocks the first source edit of a session and tells the agent to run the new skill first. Blocks once per session, never in an empty project or for non-source files; on by default, switch off with the "Style guard hook" option. Works without `jq` too (a sed fallback, like the safety net). 28 checks (14 cases, each with and without `jq`), run in CI.
 - `tests/matchcodebase/`: fixtures with deliberately odd styles, 17 checks for the script, and `run-session.sh` for headless with/without runs.
 
 ### Changed
@@ -20,6 +20,45 @@ All notable changes to this project are listed here. Versions follow the `versio
 - **A description alone did not start it for a tiny request.** Asked to "add a function" to a 5-file project, the agent edited directly in 2 of 2 runs. With the style guard hook it started in 2 of 2 runs (an "add" and a "fix" request). Two runs on one small fixture are an indication, not proof.
 - **Cost on a tiny project is higher, not lower.** Fix request: 12 turns, $0.43, 77 s with the skill; 6 turns, $0.29, 40 s without (same diff). The savings are designed for larger projects and are not yet measured (spec R15, R16).
 - The counting script runs as an ordinary shell command, so it asks for approval like any other (in a headless run with no allow rule it is denied and the agent counts by hand, which costs more).
+
+## 1.0.5 (2026-11-25)
+
+Fixes from community reports #17-#23 and the hook gaps reported in #2, each verified against the code, the validator and the official docs before fixing.
+
+### Fixed
+- **Hook gaps (#2):** `rm -Rf`, `rm -R`, `rm -r`, `rm --recursive --force`, `/bin/rm -rf` and `xargs rm -rf` are now caught, and so is a force push written as `git push origin +main`. `git rm -rf` dropped from "cannot be undone" to "hard to undo", because git can restore committed files.
+- **More hook gaps found in code review:** force pushes with combined flags (`-uf`, `-fu`), quoted arguments (`"+main"`, `"-rf"`), backslash line continuations, git global options (`git -C dir push --force`), and deleting a remote branch (`git push origin :old`, `--delete`) are now caught; `git rm --cached` is no longer flagged. A dangerous command followed by a very long body (over 64 KB) used to slip through; it no longer does.
+- **The hook no longer switches itself off without `jq` (#17).** It reads the command with `jq`, or without it a built-in plain-text fallback, and writes its output without `jq`. Every test runs under both.
+- **Plugin version in one place (#19).** The marketplace entry no longer repeats `version`, `description`, `author` or `homepage`; `plugin.json` is the single source.
+- **No `<feature>` in the interview description (#20)**, which Claude Code displayed as `&lt;feature&gt;`.
+- **Stale docs (#23):** the repo layout, the "Decisions made for you" name, and the explain skill calling the hook optional.
+
+### Changed
+- **The tour is told not to run anything (#18):** no tests, builds, scripts or servers, only read-only commands. Docs say plainly that "read only" is an instruction, not a lock, and how to get a hard guarantee.
+- **Shorter skills (#22):** the reasoning sections moved out of the tour and interview skills; it already lives in `docs/`. The templates stay inside the skills: moving them to separate files made Claude ask permission to read the skill's own folder (and fail in headless runs), which was tested and reverted.
+- **The hook searches the whole command, with a few precise exceptions (#2, #23, review findings).** Dangerous commands are found wherever they sit: after `VAR=x`, inside `if`/`for`, `( )`, `$( )`, `bash -c`, `ssh host '...'`, or a heredoc. Exceptions such as `--cached` and `--dry-run` count only among that command's own flags in the same segment (so `xargs -n 1 git clean -fd` or `nice -n 19 git clean -fdx` still warn), which fixes `git rm --cached a; git rm -f b` and `npm publish --dry-run && npm publish`. Also caught now: `git clean -d -f`, `git clean --force`, `git branch --delete --force`, `git --git-dir .git push -f`, `git -C "dir with spaces" push --force`, `git push origin main 2>&1 --force`, `npm publish --dry-run=false`, `microk8s.kubectl delete`, `sudo -u npm rm -rf`, `docker exec git rm -rf`. Mentioning a dangerous command (in an `echo`, a commit message, or a file written with `cat <<EOF`) can still warn, on purpose. Matching uses `grep`, which stays linear on both macOS and Linux (bash's own `=~` uses the system regex library, which on Linux is quadratic for these patterns), so the hook takes roughly 10-40 ms per command and under a second on 300 KB commands (`main` took about 44 ms per command). CI runs the tests on both systems. Two more designs were tried in review and dropped after two independent reviewers broke each one: checking only each command's first word missed commands `main` caught, and skipping heredoc bodies hid commands piped to `ssh`, `bash` or `docker exec`; both could also run past the hook's 10-second timeout on large inputs.
+- **No more Python in the hook.** A `python3` fallback was tried in review and removed: it would import a `json.py` planted in the project folder and run it on every command. The no-`jq` fallback (`sed`) now keeps newlines, so a dangerous command on line 2 or later is caught too.
+- **Hook command stays in shell form.** The exec form suggested in #23 (`"command": "bash"` plus `"args"`) was not adopted: on a Claude Code version that predates `args`, bash would read the hook's JSON input as a script. The quoted shell form is safe on every version. Headless behavior is documented: in `claude -p` the hook's prompt can't be answered, so risky commands are denied.
+- **Plugin icon added (#23)**, so `claude plugin validate` reports nothing.
+
+### Added
+- **Skill trigger tests (#21):** `evals/` holds six `claude plugin eval` cases, four that must load the interview and two that must not. All six pass. The four trigger cases are the prompts that failed to trigger in the stress test; the other stress-test prompts depend on a real project fixture, which these tests do not have. They use your own Claude account, so they run locally, not in CI.
+- **CI (#21):** hook tests on Linux and macOS, ShellCheck, and `claude plugin validate --strict`.
+
+## 1.0.4 (2026-11-21)
+
+Result of round 2 of the [stress test](docs/stress-test.md): the scenarios round 1 could not run (a contradicting user, "you decide", "build now", a new project, a prompt-injection note in code), driven as real sessions on fresh clones.
+
+### Fixed
+- **No false "it's in the spec".** The spec is updated before every reply, and the skill never says something is recorded unless it was written that turn. In one run it claimed delegated choices were marked as risks with no write behind it.
+- **Parked scope is said in chat.** When part of a request depends on something that does not exist (for example "friends see my folders" with no friends feature), the skill says so in one line and lists it under a new "Parked rooms" section.
+- **Contradictions are named** ("Earlier you said private; now friends should see it") and the user is asked which wins, instead of settling it inside a later question.
+- **Injected notes are reported.** If a repo file tells AI to skip questions, the first message names the file and says it is being ignored.
+- **"Build now" counts as the yes** to "Build it?": open rows become `Defaulted - RISK`, the "Decisions I made for you" list opens the next message, then it builds.
+- When the options already spelled out the consequences, a delegated irreversible choice is not re-asked: it takes the least destructive option and states the cost.
+
+### Changed
+- [Stress-test report](docs/stress-test.md) now includes round 2, its fixes and retests, and a longer list of what is still unverified.
 
 ## 1.0.3 (2026-11-16)
 
