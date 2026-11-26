@@ -76,12 +76,13 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for the wording rules.
 
 `require-style-study.sh` makes sure `every-corner-matchcodebase` runs before code is written in a project that already has code. A skill description alone did not start the skill for small requests (2 of 2 test runs skipped it), and a hook runs every time.
 
-It watches `Edit`, `Write` and `MultiEdit`. It blocks **once per session**, and only when all of these are true:
+It watches `Edit`, `Write` and `MultiEdit`. It blocks **once per session**, and only when both are true:
 
-- the file being written is a source file (`.py`, `.js`, `.ts`, `.go`, `.rs` and similar);
-- the project already contains other source files (code in `node_modules`, `vendor` and virtual environments does not count);
-- `docs/every-corner/STYLE.md` does not exist yet.
+- the file being written is a source file (`.py`, `.js`, `.ts`, `.go`, `.rs` and similar) inside the project Claude is working in (a scratch script in a temp folder does not count);
+- the project already contains other source files (code in `node_modules`, `vendor` and virtual environments does not count).
 
-The agent is told to run the skill and then repeat the edit. It never blocks twice in a session, never in an empty project, and never for docs or config files. Tests: `./hooks/test-style-guard.sh` (14 cases, each run with and without `jq`; also run in CI).
+The agent is told to run the skill and then repeat the edit. Without `docs/every-corner/STYLE.md` the skill studies the project; with it, the skill reuses the notes and re-checks only files changed since, which is cheap. (Without this nudge a later session never opened `STYLE.md`.) It never blocks twice in a session, never in an empty project, and never for docs or config files. `.vue` and `.svelte` files are not watched. Tests: `./hooks/test-style-guard.sh` (39 checks, each case with and without `jq`; also run in CI).
+
+**Headless runs:** the block is a message, not a question, so `claude -p` keeps going: the agent runs the skill and then edits. That costs a few extra turns in every new session (in a test, a 3-line rename took $0.55 and 55 s with the study against $0.25 and 23 s without). Switch the option off for unattended runs if that matters.
 
 **You need:** nothing extra; `jq` is used when present and a built-in fallback otherwise. **Installed the plugin?** It is on by default; turn it off with `/plugin configure every-corner@every-corner-skills` (option "Style guard hook"). For a manual install, copy the script like the safety net above and register it with the matcher `Edit|Write|MultiEdit`.

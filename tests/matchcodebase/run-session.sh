@@ -45,6 +45,7 @@ for line in open(path):
                 if c["name"] == "Skill": skills.append(c["input"].get("skill", ""))
     if e.get("type") == "result": res = e
 u = res.get("usage", {})
+subprocess.run(["git", "-C", work, "add", "-A", "-N"], capture_output=True)  # count new files too
 diff = subprocess.run(["git", "-C", work, "diff", "--shortstat"], capture_output=True, text=True).stdout.strip()
 print(json.dumps({
     "label": label, "mode": mode, "seconds": int(secs), "turns": res.get("num_turns"),

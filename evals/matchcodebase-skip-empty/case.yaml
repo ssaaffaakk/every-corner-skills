@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: matchcodebase-skip-empty
+description: An empty project has no style to match, so every-corner-matchcodebase must not start.
+tags: [matchcodebase, should-not-trigger]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: "Create hello.py that prints hello."
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill, Edit, Write, Bash]

@@ -10,8 +10,16 @@ All notable changes to this project are listed here. Versions follow the `versio
   - Cached by commit: an unchanged project reads no source files on the next run.
   - Read-only study; bugs and unsafe patterns found in the old code are reported, not copied.
 - [Research report](docs/every-corner/research/matchcodebase-landscape.md) on similar tools and the evidence behind the design, and the [spec](docs/every-corner/specs/every-corner-matchcodebase.md).
-- **Style guard hook** (`hooks/require-style-study.sh`): in a project with code and no `STYLE.md`, it blocks the first source edit of a session and tells the agent to run the new skill first. Blocks once per session, never in an empty project or for non-source files; on by default, switch off with the "Style guard hook" option. Works without `jq` too (a sed fallback, like the safety net). 28 checks (14 cases, each with and without `jq`), run in CI.
-- `tests/matchcodebase/`: fixtures with deliberately odd styles, 17 checks for the script, and `run-session.sh` for headless with/without runs.
+- **Style guard hook** (`hooks/require-style-study.sh`): in a project with code, it blocks the first source edit of a session and tells the agent to run the new skill first. Without `STYLE.md` the skill studies the project; with it, the skill reuses the notes and re-checks only changed files (without this nudge a later session never read `STYLE.md`). Blocks once per session, only for files inside the project Claude is working in, never in an empty project or for non-source files; on by default, switch off with the "Style guard hook" option. Works without `jq` too (a sed fallback, like the safety net). 39 checks, each case with and without `jq`, run in CI.
+- **Trigger tests:** five `claude plugin eval` cases in `evals/matchcodebase-*`, three that must start the skill (an add and a fix in a Python project, an add in a JavaScript one) and two that must not (a README typo, an empty project). Each case sets up its project with a scaffold script, so they run with `--scaffold`. All five pass, and the six interview cases still pass with the new skill and hook.
+- `tests/matchcodebase/`: fixtures with deliberately odd styles, 20 checks for the script (including hostile files), and `run-session.sh` for headless with/without runs.
+
+### Fixed in review (stress test)
+- The counting script skips symlinks and special files: a named pipe called `x.py`, or a symlink to one, made it hang forever, and a symlink could point outside the project.
+- Declaration patterns are applied only to lines up to 400 characters, with runs of spaces collapsed: one Java or C# line with 3,000 spaces took over 20 s.
+- `--since` accepts only a commit hash. `--since=--output=FILE` was passed to `git diff` as an option and wrote a file, and the value comes from `STYLE.md`, which a repository can contain.
+- The skill runs the script with `python3 -I`, so nothing from the project folder or `PYTHONPATH` is imported (the same lesson as the 1.0.5 hook).
+- The style guard ignores files outside the working project (a scratch script in a temp folder was blocked and the agent was told to write `STYLE.md` there), keeps the session id to safe characters (`../` wrote outside its folder), and keeps its once-per-session marks in the plugin's own data folder.
 
 ### Changed
 - `every-corner-interview` and `every-corner-tour` point to the new skill (the interview reads `STYLE.md` when it exists).

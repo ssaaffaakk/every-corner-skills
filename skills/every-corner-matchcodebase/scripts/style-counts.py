@@ -11,6 +11,7 @@ import collections
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 
@@ -30,6 +31,9 @@ SKIP_NAME = re.compile(
     r"(\.min\.|\.lock$|-lock\.|package-lock|\.generated\.|_pb2|\.pb\.go$|\.d\.ts$|\.snap$)"
 )
 MAX_BYTES = 1000000
+# Declaration patterns backtrack badly on very long lines; real declarations are short.
+MAX_DECL_LINE = 400
+SHA = re.compile(r"^[0-9a-fA-F]{4,40}$")
 
 FUNC = {
     "python": r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)",
@@ -234,7 +238,8 @@ def analyze_file(path, lang, text):
                 st["abs_imports"] += 1
         else:
             flush_group()
-        if not is_comment:
+        if not is_comment and len(raw) <= MAX_DECL_LINE:
+            raw = re.sub(r"[ \t]{2,}", " ", raw)  # collapse runs: the patterns only need words
             if fre:
                 fm = fre.search(raw)
                 if fm:
@@ -280,6 +285,8 @@ def main():
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
     a = ap.parse_args()
     root = os.path.abspath(a.root)
+    if a.since and not SHA.match(a.since):
+        ap.error("--since must be a commit hash (4-40 hex characters), got %r" % a.since)
     files, is_git = list_files(root, a.since)
 
     skipped = collections.Counter()
@@ -301,7 +308,13 @@ def main():
             continue
         full = os.path.join(root, rel)
         try:
-            if os.path.getsize(full) > MAX_BYTES:
+            # Only plain files: a symlink or a named pipe could point outside the
+            # project or block forever (a hostile repository can contain both).
+            info = os.lstat(full)
+            if not stat.S_ISREG(info.st_mode):
+                skipped["symlink or special file"] += 1
+                continue
+            if info.st_size > MAX_BYTES:
                 skipped["over 1 MB"] += 1
                 continue
             with open(full, "r", encoding="utf-8", errors="strict", newline="") as fh:

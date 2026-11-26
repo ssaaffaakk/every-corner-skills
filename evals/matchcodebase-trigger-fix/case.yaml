@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: matchcodebase-trigger-fix
+description: A small bug fix in a project with code must start every-corner-matchcodebase first.
+tags: [matchcodebase, should-trigger]
+context:
+  scaffold_script: scaffold.sh
+execution:
+  prompt: "Fix loadOrders in app/orders.py so it also skips empty lines."
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill, Edit, Write, Bash]

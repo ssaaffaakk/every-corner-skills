@@ -20,15 +20,17 @@ parsers="$parsers raw"
 fail=0; total=0
 
 # Hook input for an Edit call, built without jq (the test paths contain no special characters).
-input_for() { # file session
-  printf '{"tool_name":"Edit","session_id":"%s","cwd":"%s","tool_input":{"file_path":"%s"}}' "$2" "$PWD" "$1"
+input_for() { # file session [cwd]  (cwd defaults to the project folder under $T)
+  local cwd="${3:-}" proj
+  if [ -z "$cwd" ]; then proj="${1#"$T"/}"; cwd="$T/${proj%%/*}"; fi
+  printf '{"tool_name":"Edit","session_id":"%s","cwd":"%s","tool_input":{"file_path":"%s"}}' "$2" "$cwd" "$1"
 }
 
-check() { # expected name file session [VAR=value]
-  local expected="$1" name="$2" file="$3" session="$4" extra="${5:-EVERY_CORNER_NOOP=1}" out got p ok=1
+check() { # expected name file session [VAR=value] [cwd]
+  local expected="$1" name="$2" file="$3" session="$4" extra="${5:-EVERY_CORNER_NOOP=1}" cwd="${6:-}" out got p ok=1
   for p in $parsers; do
     total=$((total + 1))
-    out="$(input_for "$file" "$session-$p" | env "$extra" EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+    out="$(input_for "$file" "$session-$p" "$cwd" | env "$extra" EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
     case "$out" in
       '') got="pass" ;;
       *'"permissionDecision":"deny"'*) got="block" ;;
@@ -60,7 +62,8 @@ check block "a different session is blocked once" "$T/p1/app/orders.py" s2
 
 # 2. Cases that must stay silent.
 mkproject "$T/p2"; mkdir -p "$T/p2/docs/every-corner"; echo "# style" > "$T/p2/docs/every-corner/STYLE.md"
-check pass "STYLE.md already exists" "$T/p2/app/orders.py" s3
+check block "STYLE.md exists: sent to the skill to reuse it" "$T/p2/app/orders.py" s3
+check pass  "STYLE.md exists: still only once per session" "$T/p2/app/users.py" s3
 mkproject "$T/p3"
 check pass "not a source file (README.md)" "$T/p3/README.md" s4
 check pass "not a source file (docs, json)" "$T/p3/package.json" s5
@@ -81,7 +84,30 @@ check pass "the only source file is the one being edited (no git)" "$T/only/src/
 mkdir -p "$T/nm/node_modules/pkg" && printf 'module.exports = 1\n' > "$T/nm/node_modules/pkg/index.js"
 check pass "code only inside node_modules does not count" "$T/nm/app.js" s12
 
-# 4. Bad input must never error or block.
+# 4. Review findings: files outside the project, unsafe session ids, large edits.
+mkproject "$T/p6"; mkdir -p "$T/scratch" && printf 'y = 1\n' > "$T/scratch/old.py"
+check pass  "scratch script outside the working project" "$T/scratch/helper.py" s13 EVERY_CORNER_NOOP=1 "$T/p6"
+mkproject "$T/p7"; mkdir -p "$T/p7/sub"
+check block "file in the same repo but outside the working subfolder" "$T/p7/app/orders.py" s14 EVERY_CORNER_NOOP=1 "$T/p7/sub"
+mkproject "$T/p8"
+check block "session id with ../ is still blocked once" "$T/p8/app/orders.py" "../../escaped"
+if ls "$T" | grep -q escaped || ls "$TMPDIR" | grep -q escaped; then
+  echo "FAIL  guard file escaped its folder"; fail=$((fail + 1))
+else echo "ok    pass   guard file stays in its folder"; fi
+total=$((total + 1))
+mkproject "$T/p9"
+big="$(awk 'BEGIN { for (i = 0; i < 100000; i++) printf "def f%d(x):\\n    return x\\n", i }')"
+for p in $parsers; do
+  total=$((total + 1)); t0=$SECONDS
+  out="$(printf '{"session_id":"big-%s","cwd":"%s","tool_name":"Write","tool_input":{"file_path":"%s","content":"%s"}}' \
+    "$p" "$T/p9" "$T/p9/app/new.py" "$big" | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK")"
+  took=$((SECONDS - t0))
+  case "$out" in *'"deny"'*) ;; *) echo "FAIL  [$p] 3 MB write was not blocked"; fail=$((fail + 1)); continue ;; esac
+  if [ "$took" -gt 4 ]; then echo "FAIL  [$p] 3 MB write took ${took}s (limit 4s)"; fail=$((fail + 1))
+  else echo "ok    block  [$p] 3 MB write handled in ${took}s"; fi
+done
+
+# 5. Bad input must never error or block.
 for p in $parsers; do
   total=$((total + 1))
   out="$(printf 'not json' | EVERY_CORNER_HOOK_PARSER="$p" "$hook_bash" "$HOOK" 2>/dev/null)"; rc=$?

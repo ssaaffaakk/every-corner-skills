@@ -52,5 +52,32 @@ check "1000 files: counted + skipped == listed"    "d['files_counted']+sum(d['sk
 check "1000 files: all 1000 python files counted"  "d['languages']['python']['files']==1000" "$TMP/big.json"
 if python3 -c "import sys;sys.exit(0 if $elapsed < 5 else 1)"; then pass=$((pass+1)); echo "PASS 1000 files in ${elapsed}s (limit 5s)"; else fail=$((fail+1)); echo "FAIL 1000 files took ${elapsed}s"; fi
 
+# Review findings: hostile inputs must not hang the script or reach outside the project.
+timed() { # name, limit-seconds, command...  (python timer: macOS has no `timeout`)
+  local name="$1" lim="$2"; shift 2
+  if python3 -I -c '
+import subprocess, sys
+try:
+    sys.exit(subprocess.run(sys.argv[2:], capture_output=True, timeout=float(sys.argv[1])).returncode)
+except subprocess.TimeoutExpired:
+    sys.exit(124)' "$lim" "$@"
+  then pass=$((pass+1)); echo "PASS $name"; else fail=$((fail+1)); echo "FAIL $name (hung or crashed)"; fi
+}
+H="$TMP/hostile"; mkdir -p "$H/src"
+python3 -c "
+import sys; d = sys.argv[1]
+open(d + '/src/A.java', 'w').write('public' + ' ' * 5000 + 'x\n' + 'public ' + 'a ' * 199 + 'b\n')
+open(d + '/src/B.cs', 'w').write('public' + ' ' * 5000 + 'x\n')
+open(d + '/src/c.c', 'w').write('a' * 5000 + ' b\n')
+open(d + '/src/ok.py', 'w').write('x = 1\n')" "$H"
+mkfifo "$H/src/pipe.py" "$TMP/outside.fifo"; ln -s "$TMP/outside.fifo" "$H/src/link.py"
+timed "hostile files (long lines, FIFO, symlink to FIFO) finish" 10 python3 -I $S "$H" --json
+python3 -I $S "$H" --json > "$TMP/h.json" 2>/dev/null
+check "FIFO and symlink are skipped, not read"     "d['skipped'].get('symlink or special file')==2" "$TMP/h.json"
+( cd "$H" && git init -q && git add src/ok.py && git -c user.email=t@t -c user.name=t commit -qm i )
+python3 -I $S "$H" "--since=--output=$TMP/pwned" >/dev/null 2>&1
+if [ -e "$TMP/pwned..HEAD" ]; then fail=$((fail+1)); echo "FAIL --since passed an option to git"
+else pass=$((pass+1)); echo "PASS --since accepts only a commit hash"; fi
+
 echo; echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

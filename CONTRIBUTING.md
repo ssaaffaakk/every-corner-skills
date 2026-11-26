@@ -47,6 +47,12 @@ If you change a skill's `description`, also run the trigger tests locally (they 
 claude plugin eval . --runs 1 --ablation none
 ```
 
+The `every-corner-matchcodebase` cases need a project with code to start in, so each one has a `scaffold.sh` that copies a fixture from `tests/matchcodebase/fixtures/`. Scaffolds only run with `--scaffold`, and the cases need permission to edit:
+
+```bash
+claude plugin eval . --tag matchcodebase --runs 1 --ablation none --scaffold --allow-tools Edit Write 'Bash(python3:*)' 'Bash(git:*)' 'Bash(make:*)'
+```
+
 Keep `--ablation none`: in the default two-arm run, the "should trigger" graders (`tool_used: Skill`) are reported only as indicators and don't count toward the score, so a triggering regression would not fail the run.
 
 ## Releases (maintainers)
