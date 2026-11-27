@@ -157,6 +157,8 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 - Explanations come from the same model that proposed the action.
 - The match skill's description alone did not start it for very small requests (two of two test runs skipped it), so a hook (`hooks/require-style-study.sh`) blocks the first source edit once per session and sends the agent to it; it then started in two of two runs. On a 5-file project it cost more than not using it ($0.43 vs $0.29, one run each). Its token cost on larger projects and its win over a no-skill baseline are not measured yet; the numbers in the research report come from other tools and papers. The counting script's outlier flags are heuristics (for example, semicolon detection in JS and TS is approximate).
 
+- The five working skills (`debug`, `verify`, `diff`, `review`, `handoff`) are only trigger-tested: 32 one-run cases check that each starts when it should. Nothing measures whether their notes are good, and there is no run without the plugin to compare with.
+
 ## Repo layout
 
 ```
