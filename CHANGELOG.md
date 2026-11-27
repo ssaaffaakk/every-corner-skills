@@ -2,7 +2,7 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
-## 1.2.0 (2026-11-26)
+## 1.2.0 (2026-11-27)
 
 ### Added
 - **every-corner-debug:** reproduces a bug, tests two or three possible causes, explains the root cause, then fixes it and reruns the check. Saves `docs/every-corner/debug/<bug>.md`.
@@ -13,7 +13,7 @@ All notable changes to this project are listed here. Versions follow the `versio
 - Thirty-two trigger evals (four should-trigger cases per skill, one of them in plain conversational wording, and two to three should-not-trigger near misses) and a [survey of existing tools](docs/research.md) the skills borrow from.
 
 ### Changed
-- The README's always-on cost is now about 900 tokens (the names and descriptions of nine skills, 3,451 characters), up from about 500 for four.
+- The README's always-on cost is now about 900 tokens (the names and descriptions of nine skills, 3,457 characters), up from about 500 for four.
 - The first draft of this release also contained `every-corner-codebase`. It was dropped before release: `every-corner-matchcodebase` (1.1.0, issue #25) does the same job with a counting script, a hook and 101 + 44 tests.
 
 ### Hardening before release (stress test and reviews)
@@ -28,7 +28,7 @@ All notable changes to this project are listed here. Versions follow the `versio
 
 ### Known limits
 - **The new evals only check that the skill starts.** Each runs once in an empty folder with a one-line prompt (about 20 s). None checks that a debug, review or handoff note is any good, and there is no baseline run without the plugin, so they show triggering, not benefit.
-- **A hostile-input run found nothing to fix in the model's behavior.** Four real `claude -p` sessions on throwaway projects (no transcripts are committed; a diff titled `../../.git/hooks/post-commit`, a secret in a crash log, a README telling reviewers to approve, a change whose test file writes a marker file) all ended safely before the hardening; the rules above make that deliberate rather than luck of one model.
+- **A hostile-input run found nothing to fix in the model's behavior.** Four real `claude -p` sessions on throwaway projects (no transcripts are committed; a diff titled `../../.git/hooks/post-commit`, a secret in a crash log, a README telling reviewers to approve, a change whose test file writes a marker file) all ended safely before the hardening; the rules above are meant to make that deliberate rather than luck of one model; the scenarios were not re-run after the hardening.
 - These skills overlap with `/code-review`, `/security-review` and the superpowers skills. They add the saved file, the coverage ledger and the read-only rules, not new analysis.
 
 ## 1.1.0 (2026-11-26)

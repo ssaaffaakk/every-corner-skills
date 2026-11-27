@@ -128,7 +128,7 @@ Reproduces the failure, tests two or three possible causes from cheapest to cost
 
 ### ✅ every-corner-verify: *prove the result*
 
-Runs the project's relevant checks and records their real output. If an interview spec exists, each requirement gets a Pass, Fail, Blocked or Unverified result in `docs/every-corner/verification/`; in the spec's own Review table, Pass becomes `Met` and Fail, Blocked or Unverified become `Not met` (the Note column gives the failure evidence, or `Unverified: why`); `Changed` is left to the interview's review pass.
+Runs the project's relevant checks and records their real output. If an interview spec exists, each requirement gets a Pass, Fail, Blocked or Unverified result in `docs/every-corner/verification/`; in the spec's own Review table, Pass becomes `Met` and Fail, Blocked or Unverified become `Not met` (the Note column gives the failure evidence, or `Unverified: why`); `Changed` is never written by verify; it belongs to the interview's review pass.
 
 ### 🔎 every-corner-diff: *understand before accepting*
 
