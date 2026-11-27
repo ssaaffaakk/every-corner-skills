@@ -10,10 +10,10 @@ All notable changes to this project are listed here. Versions follow the `versio
 - **every-corner-diff:** explains a diff, commit or PR by intent, follows effects into unchanged files and names up to three evidence-based risks. Saves `docs/every-corner/diffs/<change>.md`.
 - **every-corner-review:** reviews a diff for correctness, security and local style and reports only verified findings with a severity and how each was verified. Never approves. Saves `docs/every-corner/reviews/<change>.md`.
 - **every-corner-handoff:** records what is done, what is half-done, the next step and how to run the project, with every cited line re-checked. Saves `docs/every-corner/HANDOFF.md`.
-- Thirty-two trigger evals (four should-trigger cases per skill, one of them in everyday wording with none of the skill's own vocabulary, and two to three should-not-trigger near misses) and a [survey of existing tools](docs/research.md) the skills borrow from.
+- Thirty-two trigger evals (four should-trigger cases per skill, one of them in plain conversational wording, and two to three should-not-trigger near misses) and a [survey of existing tools](docs/research.md) the skills borrow from.
 
 ### Changed
-- The README's always-on cost is now about 900 tokens (nine skill descriptions, 3,451 characters), up from about 500 for four.
+- The README's always-on cost is now about 900 tokens (the names and descriptions of nine skills, 3,451 characters), up from about 500 for four.
 - The first draft of this release also contained `every-corner-codebase`. It was dropped before release: `every-corner-matchcodebase` (1.1.0, issue #25) does the same job with a counting script, a hook and 101 + 44 tests.
 
 ### Hardening before release (stress test and reviews)
