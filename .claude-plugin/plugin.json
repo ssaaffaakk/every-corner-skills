@@ -1,7 +1,7 @@
 {
   "name": "every-corner",
-  "version": "1.1.0",
-  "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, writes new code in your project's exact style, and explains every risky command before you click Accept.",
+  "version": "1.2.0",
+  "description": "Claude Code that works like a senior developer: it tours your codebase in plain English, interviews you before building so features land right the first time, writes new code in your project's exact style, finds the cause of bugs before fixing them, proves a change works, explains and reviews diffs, hands work off between sessions, and explains every risky command before you click Accept.",
   "author": {
     "name": "ssaaffaakk",
     "url": "https://github.com/ssaaffaakk"
@@ -17,7 +17,10 @@
     "beginners",
     "senior-developer",
     "code-style",
-    "conventions"
+    "conventions",
+    "debugging",
+    "code-review",
+    "verification"
   ],
   "userConfig": {
     "safetynet": {

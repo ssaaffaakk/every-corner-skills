@@ -47,6 +47,12 @@ If you change a skill's `description`, also run the trigger tests locally (they 
 claude plugin eval . --tag interview --runs 1 --ablation none
 ```
 
+The five working skills (`debug`, `verify`, `diff`, `review`, `handoff`) each have a tag of the same name; these cases check only that the skill starts, from a one-line prompt in an empty folder:
+
+```bash
+for t in debug verify diff review handoff; do claude plugin eval . --tag $t --runs 1 --ablation none; done
+```
+
 The `every-corner-matchcodebase` cases need a project with code to start in, so each one has a `scaffold.sh` that copies a fixture from `tests/matchcodebase/fixtures/`. Scaffolds only run with `--scaffold`, and the cases need permission to edit:
 
 ```bash

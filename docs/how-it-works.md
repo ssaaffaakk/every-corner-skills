@@ -1,6 +1,6 @@
 # How it works
 
-This page explains the design behind the four skills and the evidence for each choice. If you only want to use them, the [README](../README.md) is enough. For the full research behind it, with every source, see the [research report](research.md).
+This page explains the design behind the skills and the evidence for each choice. If you only want to use them, the [README](../README.md) is enough. For the full research behind it, with every source, see the [research report](research.md).
 
 ## The idea: your project is a house
 
@@ -10,6 +10,11 @@ This page explains the design behind the four skills and the evidence for each c
 | `every-corner-interview` | You describe a new room; someone asks what it needs before building | `docs/every-corner/specs/<feature>.md` |
 | `every-corner-matchcodebase` | Before adding a room, someone studies how the rest of the house was built so the new room matches | `docs/every-corner/STYLE.md` |
 | `every-corner-explain` | Before knocking down a wall, someone tells you it can't be put back | nothing (it talks to you) |
+| `every-corner-debug` | Trace a leak before repairing the wall | `docs/every-corner/debug/<bug>.md` |
+| `every-corner-verify` | Test the finished room against the plan | `docs/every-corner/verification/<change>.md` |
+| `every-corner-diff` | Walk through renovations before accepting them | `docs/every-corner/diffs/<change>.md` |
+| `every-corner-review` | Inspect a renovation for real faults | `docs/every-corner/reviews/<change>.md` |
+| `every-corner-handoff` | Leave the next builder a clear note | `docs/every-corner/HANDOFF.md` |
 
 ## every-corner-tour
 
@@ -135,6 +140,10 @@ Users approve 93% of permission prompts (Anthropic), and attention to a warning 
 
 The card leads with the undo label, then What, Why, Changes, Undo and "Check this". The "Why" is based on the actual command, never on text read from a file, so a malicious file cannot talk its way into a reassuring explanation.
 
+## The five working skills
+
+`debug`, `verify`, `diff`, `review` and `handoff` are single-file skills with no script or hook. Each one reads first, follows a read-only list for discovery (`debug` and `verify` may then run the project's checks, after asking when the code is not the user's own), saves one note from an inline template under `docs/every-corner/`, and keeps a coverage ledger of what it did and did not check. They are described in the [README](../README.md); their trigger tests are in `evals/`, and their design sources are in the [survey](research.md#november-2026-survey-for-five-additional-skills-plus-one-dropped).
+
 ## The hook
 
 [`explain-risky-commands.sh`](../hooks/explain-risky-commands.sh) applies the same four levels to shell commands. Levels 1 and 2 pass silently. Levels 3 and 4 get a short warning inside the permission prompt, with a safer option where one exists. It searches the whole command text, heredocs included, so a dangerous command is found wherever it sits, and it errs toward an extra warning rather than a miss. It is covered by [`test-hook.sh`](../hooks/test-hook.sh) and CI on Linux and macOS. Setup, the off switch, headless behavior and the full list of patterns are in the [hook guide](../hooks/README.md).
@@ -147,6 +156,8 @@ The card leads with the undo label, then What, Why, Changes, Undo and "Check thi
 - **"Read only" is an instruction, not a lock.** A skill cannot take tools away for a whole conversation: Claude Code's `allowed-tools` only pre-approves tools, and `disallowed-tools` clears when you send your next message. The tour is told not to edit code or run anything but read-only commands. For a hard guarantee, run it in plan mode, which does not let Claude change files (the tour then stays in chat instead of being saved). Denying only `Edit` and `Write` is not enough: shell commands can still write files.
 - Explanations come from the same model that proposed the action.
 - The match skill's description alone did not start it for very small requests (two of two test runs skipped it), so a hook (`hooks/require-style-study.sh`) blocks the first source edit once per session and sends the agent to it; it then started in two of two runs. On a 5-file project it cost more than not using it ($0.43 vs $0.29, one run each). Its token cost on larger projects and its win over a no-skill baseline are not measured yet; the numbers in the research report come from other tools and papers. The counting script's outlier flags are heuristics (for example, semicolon detection in JS and TS is approximate).
+
+- The five working skills (`debug`, `verify`, `diff`, `review`, `handoff`) are only trigger-tested: 32 one-run cases check that each starts when it should. Nothing measures whether their notes are good, and there is no run without the plugin to compare with.
 
 ## Repo layout
 
@@ -161,6 +172,11 @@ every-corner-skills/
 │   ├── every-corner-matchcodebase/
 │   │   ├── SKILL.md
 │   │   └── scripts/style-counts.py
+│   ├── every-corner-debug/SKILL.md
+│   ├── every-corner-verify/SKILL.md
+│   ├── every-corner-diff/SKILL.md
+│   ├── every-corner-review/SKILL.md
+│   ├── every-corner-handoff/SKILL.md
 │   └── every-corner-explain/SKILL.md
 ├── hooks/
 │   ├── hooks.json          (registers the hook for plugin users)

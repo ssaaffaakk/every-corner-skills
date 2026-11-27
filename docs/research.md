@@ -138,3 +138,65 @@ The cheapest question is the one answered by reading the repo first. The coverag
 The research reframes the original question. "How many questions?" is the wrong parameter. The right one is the value threshold a question must clear. Fixed caps like Spec Kit's five are a cost-control shortcut, and "interview until complete" works only when completeness can be measured. Volere's fit-criterion test plus a coverage ledger supplies that measure. With both in place, an uncapped interview stays efficient: in a rich room it asks thirty sharp questions, and in a simple one it asks none. The same logic connects all three modes. Tour's directory ledger, Interview's requirement ledger and Explain's risk tiers each replace an implicit judgment ("I covered it", "I understood it", "this is safe") with an explicit one the junior can see and check. That visibility is how a good senior developer works.
 
 The largest open risk is that no published study yet ties any of this to one-shot build success with real users. The evidence comes from LLM-simulated users, survey methodology and security-warning research, not from interviews of developers building features. The skill should therefore record its own telemetry: questions asked per tier, how often users choose "build now", and how many post-build fixes trace back to a Defaulted ledger row. Those numbers would turn this report's judgment calls into tuned parameters within a few dozen sessions.
+
+
+## November 2026 survey for five additional skills (plus one dropped)
+
+Read-only sweep of 31 existing skill or command files across five projects, plus four review tools. License is the repository's GitHub license metadata; it is not a license claim about copied text. We reused workflow ideas and wrote original skill text. No outside code or skill was installed or run.
+
+| Existing skill or command | Repo license | Idea to borrow; failure to avoid |
+|---|---|---|
+| [`obra/superpowers/skills/brainstorming/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md) | MIT | Ask the user about consequential ambiguity; avoid broad auto-triggering. |
+| [`obra/superpowers/skills/diagnosing-superpowers/prompts/plan-adherence.md`](https://github.com/obra/superpowers/blob/main/skills/diagnosing-superpowers/prompts/plan-adherence.md) | MIT | Map a plan to observed steps; avoid treating planned work as done. |
+| [`obra/superpowers/skills/executing-plans/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/executing-plans/SKILL.md) | MIT | Keep a task ledger; avoid extra ceremony per tiny step. |
+| [`obra/superpowers/skills/finishing-a-development-branch/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/finishing-a-development-branch/SKILL.md) | MIT | Run tests before declaring ready; avoid assuming a green run. |
+| [`obra/superpowers/skills/receiving-code-review/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/receiving-code-review/SKILL.md) | MIT | Verify feedback before changing code; avoid reflexive agreement. |
+| [`obra/superpowers/skills/requesting-code-review/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/requesting-code-review/SKILL.md) | MIT | Review against scope; avoid its last-commit default. |
+| [`obra/superpowers/skills/systematic-debugging/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md) | MIT | Trace causes before editing; avoid single-hypothesis certainty. |
+| [`obra/superpowers/skills/test-driven-development/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md) | MIT | Observe a regression check fail first when feasible; avoid ritual tests. |
+| [`obra/superpowers/skills/writing-plans/SKILL.md`](https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md) | MIT | Name files and checks; avoid duplicating an agreed spec. |
+| [`anthropics/claude-plugins-official/plugins/claude-security/skills/ci-review/SKILL.md`](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/claude-security/skills/ci-review/SKILL.md) | Apache-2.0 | Limit unattended review scope; avoid assuming a scan is an approval. |
+| [`anthropics/claude-plugins-official/plugins/code-modernization/commands/modernize-review.md`](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-modernization/commands/modernize-review.md) | Apache-2.0 | Separate user judgment from code evidence; avoid guessing policy. |
+| [`anthropics/claude-plugins-official/plugins/code-modernization/commands/modernize-verify.md`](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-modernization/commands/modernize-verify.md) | Apache-2.0 | Give each item a bounded verdict; avoid self-reported proof. |
+| [`anthropics/claude-plugins-official/plugins/code-review/commands/code-review.md`](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-review/commands/code-review.md) | Apache-2.0 | Check whole PR context; avoid posting comments without request. |
+| [`anthropics/claude-plugins-official/plugins/pr-review-toolkit/commands/review-pr.md`](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/pr-review-toolkit/commands/review-pr.md) | Apache-2.0 | Inspect multiple failure classes; avoid imported project conventions. |
+| [`coderabbitai/skills/packaging/mcp/skills/code-review/SKILL.md`](https://github.com/coderabbitai/skills/blob/main/packaging/mcp/skills/code-review/SKILL.md) | MIT | Define review scope explicitly; avoid requiring an external CLI. |
+| [`coderabbitai/skills/skills/code-review/SKILL.md`](https://github.com/coderabbitai/skills/blob/main/skills/code-review/SKILL.md) | MIT | Preserve severity and changed-file scope; avoid autonomous fix loops. |
+| [`florianbuetow/claude-code/plugins/agent-guardrails/skills/test/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/agent-guardrails/skills/test/SKILL.md) | MIT | Check observable behavior of a guard; avoid calling configuration proof. |
+| [`florianbuetow/claude-code/plugins/appsec/skills/explain/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/appsec/skills/explain/SKILL.md) | MIT | Explain security findings in plain terms; avoid jargon-only reports. |
+| [`florianbuetow/claude-code/plugins/appsec/skills/review-plan/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/appsec/skills/review-plan/SKILL.md) | MIT | Consider security at design time; avoid conflating plan and code review. |
+| [`florianbuetow/claude-code/plugins/appsec/skills/verify/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/appsec/skills/verify/SKILL.md) | MIT | Re-run a specific fix check; avoid generic green-test claims. |
+| [`florianbuetow/claude-code/plugins/codebasescout/commands/scout.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/codebasescout/commands/scout.md) | MIT | Map task-relevant files; avoid ranking code as an objective verdict. |
+| [`florianbuetow/claude-code/plugins/explain-system-tradeoffs/skills/explain-system-tradeoffs/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/explain-system-tradeoffs/skills/explain-system-tradeoffs/SKILL.md) | MIT | Tie choices to code evidence; avoid broad architecture claims. |
+| [`florianbuetow/claude-code/plugins/handoff/skills/continue/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/handoff/skills/continue/SKILL.md) | MIT | Point to a first next action; avoid replaying a whole transcript. |
+| [`florianbuetow/claude-code/plugins/handoff/skills/create/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/handoff/skills/create/SKILL.md) | MIT | Record decisions and status; avoid a long handoff document. |
+| [`florianbuetow/claude-code/plugins/handoff/skills/handoff/SKILL.md`](https://github.com/florianbuetow/claude-code/blob/main/plugins/handoff/skills/handoff/SKILL.md) | MIT | Use narrow handoff triggers; avoid triggering on any mention of a session. |
+| [`github/spec-kit/.github/skills/code-review/SKILL.md`](https://github.com/github/spec-kit/blob/main/.github/skills/code-review/SKILL.md) | MIT | Compare changes to spec and negative cases; avoid review as implementation. |
+| [`github/spec-kit/extensions/bug/commands/speckit.bug.test.md`](https://github.com/github/spec-kit/blob/main/extensions/bug/commands/speckit.bug.test.md) | MIT | Record a bug-fix verification report; avoid assuming fix means tested. |
+| [`github/spec-kit/extensions/selftest/commands/selftest.md`](https://github.com/github/spec-kit/blob/main/extensions/selftest/commands/selftest.md) | MIT | Exercise an end-to-end lifecycle; avoid only checking syntax. |
+| [`github/spec-kit/presets/lean/commands/speckit.implement.md`](https://github.com/github/spec-kit/blob/main/presets/lean/commands/speckit.implement.md) | MIT | Check task completion against artifacts; avoid checkbox-only proof. |
+| [`github/spec-kit/presets/lean/commands/speckit.plan.md`](https://github.com/github/spec-kit/blob/main/presets/lean/commands/speckit.plan.md) | MIT | Keep planning lightweight; avoid re-planning a settled task. |
+| [`github/spec-kit/presets/self-test/commands/speckit.specify.md`](https://github.com/github/spec-kit/blob/main/presets/self-test/commands/speckit.specify.md) | MIT | Keep a spec link; avoid treating a placeholder as agreement. |
+
+| Review bot or code tool | Repo license | Idea to borrow; failure to avoid |
+|---|---|---|
+| [PR-Agent](https://github.com/The-PR-Agent/pr-agent) | MIT | Account for every changed file, even filtered files; do not equate an approval with complete coverage. |
+| [reviewdog](https://github.com/reviewdog/reviewdog) | MIT | Precise file anchors and severity; do not hide root-relative paths or raw, unreadable diffs. |
+| [OpenReviewer](https://github.com/Ascent-AI-org/OpenReviewer) | Apache-2.0 | Refute a candidate finding before reporting it; do not turn a speculative concern into a bug. |
+| [Aider](https://github.com/Aider-AI/aider) | Apache-2.0 | Map task-relevant files; do not present a repository map as full code coverage. |
+
+### Issues checked for failure modes
+
+State on 2026-11-26: all are open except PR-Agent #5144, which has since been closed.
+
+- [Superpowers #2724](https://github.com/obra/superpowers/issues/2724): a `HEAD~1` review base can omit earlier commits. Diff and review use the actual PR base and merge base.
+- [Superpowers #2726](https://github.com/obra/superpowers/issues/2726): README workflow drift makes promises inaccurate. The README's always-on token figure here was computed from the skill names and descriptions on 2026-11-26 (3,457 characters for nine skills, about 900 tokens); recompute it when a description changes.
+- [Anthropic plugins #7178](https://github.com/anthropics/claude-plugins-official/issues/7178): a reviewer imported another project's logging conventions. Review requires current-project evidence, and `every-corner-matchcodebase` cites only lines it re-opened.
+- [CodeRabbit skills #77](https://github.com/coderabbitai/skills/issues/77): skill workflow gaps were found by reviewing the skill itself. Verify marks a check that did not run as `Blocked` or `Unverified`, never `Pass`.
+- [Spec Kit #5566](https://github.com/github/spec-kit/issues/5566): a stored feature path can point at a missing folder. Verify reads the spec it is pointed at and treats a Draft as not approved; it does not repair a missing path.
+- [PR-Agent #5144](https://github.com/The-PR-Agent/pr-agent/issues/5144): ignored files can be excluded from an unreviewed count. Diff and review list partial, skipped and unknown paths explicitly.
+- [PR-Agent #5121](https://github.com/The-PR-Agent/pr-agent/issues/5121): findings without severity are hard to prioritize. Review labels each verified finding.
+- [reviewdog #2151](https://github.com/reviewdog/reviewdog/issues/2151): file links lose subdirectory prefixes. Every citation uses a complete project-root path.
+- [reviewdog #2825](https://github.com/reviewdog/reviewdog/issues/2825): unknown severity can be misranked. Review keeps unverified questions outside severity findings.
+
+The survey also covered a sixth skill, `every-corner-codebase`; it was dropped because `every-corner-matchcodebase` (issue #25) does that job with a counting script and a hook. The sources show recurring problems with scope and proof, but they do not prove these five prompts will trigger correctly or improve developer outcomes. The local eval run is reported in the PR.

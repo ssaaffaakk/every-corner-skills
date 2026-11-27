@@ -2,6 +2,35 @@
 
 All notable changes to this project are listed here. Versions follow the `version` field in [`.claude-plugin/plugin.json`](.claude-plugin/plugin.json).
 
+## 1.2.0 (2026-11-27)
+
+### Added
+- **every-corner-debug:** reproduces a bug, tests two or three possible causes, explains the root cause, then fixes it and reruns the check. Saves `docs/every-corner/debug/<bug>.md`.
+- **every-corner-verify:** runs the project's checks, records the real output and compares each requirement with an agreed interview spec (Pass, Fail, Blocked or Unverified). Saves `docs/every-corner/verification/<change>.md`.
+- **every-corner-diff:** explains a diff, commit or PR by intent, follows effects into unchanged files and names up to three evidence-based risks. Saves `docs/every-corner/diffs/<change>.md`.
+- **every-corner-review:** reviews a diff for correctness, security and local style and reports only verified findings with a severity and how each was verified. Never approves. Saves `docs/every-corner/reviews/<change>.md`.
+- **every-corner-handoff:** records what is done, what is half-done, the next step and how to run the project, with every cited line re-checked. Saves `docs/every-corner/HANDOFF.md`.
+- Thirty-two trigger evals (four should-trigger cases per skill, one of them in plain conversational wording, and two to three should-not-trigger near misses) and a [survey of existing tools](docs/research.md) the skills borrow from.
+
+### Changed
+- The README's always-on cost is now about 900 tokens (the names and descriptions of nine skills, 3,457 characters), up from about 500 for four.
+- The first draft of this release also contained `every-corner-codebase`. It was dropped before release: `every-corner-matchcodebase` (1.1.0, issue #25) does the same job with a counting script, a hook and 101 + 44 tests.
+
+### Hardening before release (stress test and reviews)
+- All five skills got read-only rules in the spirit of `every-corner-matchcodebase`, a little stricter: `find` without `-delete`, `-exec`, `-execdir`, `-ok`, `-okdir`, `-fprint`, `-fprint0`, `-fprintf` or `-fls`; `rg` never with `--pre` or `--hostname-bin` (they run a command); `sed -n` instead of any `sed`; `git log`, `git show` and `git diff` never with `--output` (it writes a file); git only from the project root, because a committed folder shaped like a bare repository can carry a `core.fsmonitor` command.
+- The four skills that name their note (debug, verify, diff, review) use a slug (a PR title or request could have been `../../.git/hooks/post-commit`); `handoff` writes a fixed file name. The slug is now lowercase letters, digits and hyphens that the agent makes itself, and never a path or repository text.
+- Saved notes no longer copy secrets: logs and environment dumps that end up in debug, verification and handoff notes are written as `[redacted]`.
+- `every-corner-review` said both "run tests after checking their effects" and "never execute PR code"; a test runner executes whatever the change contains. It now runs nothing unless asked and says `Not run` in its ledger. `every-corner-verify` asks before running the tests of code that is not the user's own. `diff` and `handoff` treat instructions in repository files as data.
+- `review` and `debug` read `docs/every-corner/STYLE.md` (the notes of `every-corner-matchcodebase`) instead of the removed `CODEBASE.md`.
+- `sed` on the read-only lists is limited to `sed -n '<from>,<to>p'` (GNU `sed` can write files and run commands with `w`, `e` and `r`, which the security review caught). `every-corner-debug` asks before running the tests or reproduction of code that is not the user's own, and `every-corner-verify` treats repository text, specs and test output as data (both gaps were in the first hardening; found by the security review).
+- `every-corner-verify` wrote Review table values (`Unverified`, extra columns) that the interview spec template does not have; it now writes `Met` or `Not met` (never `Changed`, which belongs to the interview's own review pass) with the evidence in the Note column. The how-it-works repo layout, a short section on the five skills and CONTRIBUTING's eval command were missing.
+- The research survey now says one cited issue is closed and no longer points to a skill that was removed.
+
+### Known limits
+- **The new evals only check that the skill starts.** Each runs once in an empty folder with a one-line prompt (about 20 s). None checks that a debug, review or handoff note is any good, and there is no baseline run without the plugin, so they show triggering, not benefit.
+- **A hostile-input run found nothing to fix in the model's behavior.** Four real `claude -p` sessions on throwaway projects (no transcripts are committed; a diff titled `../../.git/hooks/post-commit`, a secret in a crash log, a README telling reviewers to approve, a change whose test file writes a marker file) all ended safely before the hardening; the rules above are meant to make that deliberate rather than luck of one model; the scenarios were not re-run after the hardening.
+- These skills overlap with `/code-review`, `/security-review` and the superpowers skills. They add the saved file, the coverage ledger and the read-only rules, not new analysis.
+
 ## 1.1.0 (2026-11-26)
 
 ### Added
